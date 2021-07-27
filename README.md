@@ -29,6 +29,34 @@ You will then need to create a .env file. This file should contain an API key th
 
     api-key=THIS_IS_YOUR_KEY
 
+A database is required to run this project. Create a database file called webmentions.db and use sqlite3 to enter it:
+
+    sqlite3 webmentions.db
+
+Use these commands to create the tables necessary to run this project:
+
+    CREATE TABLE webmentions (
+        source,
+        target,
+        property,
+        contents,
+        author_name,
+        author_photo,
+        author_url,
+        content_html,
+        received_date,
+        status
+    );
+
+    CREATE TABLE sent_webmentions (
+        source,
+        target,
+        sent_date,
+        status_code,
+        response
+        webmention_endpoint
+    );
+
 After following these steps, you are ready to use the endpoint. To run the server, run this command:
 
     flask run
