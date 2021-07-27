@@ -4,6 +4,8 @@ This project contains the source code behind [webmention.jamesg.blog](https://we
 
 If you have not heard of webmentions, I would encourage you to check out the [IndieWeb wiki webmentions page](https://indieweb.org/Webmention) to learn more. In short, webmentions are a way for you to send a message from one website to another. This approach lets you maintain control over your own content while also allowing you to share your content with others.
 
+To use this project, you will need to replace all mentions of "jamesg.blog" with your own domain name in the codebase.
+
 ## Endpoints
 
 Here are the endpoints supported by this project:
