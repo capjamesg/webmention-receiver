@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Webmention Feed</title>
+    <link rel="stylesheet" href="https://jamesg.blog/assets/styles/styles.css" />
+
+    <link rel="icon" href="https://jamesg.blog/favicon.ico" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      nav li {
+          list-style-type: none;
+          color: black;
+          font-size: 24px;
+          font-weight: 600;
+      }
+      h1 {
+          border-bottom: 5px dotted hotpink;
+          display: inline-block;
+          margin-bottom: 5px;
+      }
+      img {
+	        width: 75% !important;
+      }
+      input {
+        margin-bottom: 10px;
+        display: inline-block;
+      }
+      input[type="submit"] {
+          padding: 10px;
+          border: none;
+          background-color: royalblue;
+          color: white;
+          border-radius: 10px;
+          min-width: 0 !important;
+          appearance: none;
+          margin-top: 10px;
+      }
+      pre {
+        background-color: white;
+        border: 2.5px dotted orange;
+        padding: 2.5px;
+      }
+      .tab {
+        display: inline-block;
+      }
+      .tab li {
+        padding-right: 10px;
+        float: left;
+      }
+      .active_tab {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="#main" class="accessibility_label">Skip to main content</a>
+      <div id="main">
+        <section>
+          <h1>James' Webmention Dashboard</h1>
+          <p>You have received {{ webmentions | length }} webmention{% if webmentions | length > 1 %}s{% endif %}.</p>
+          <ul class="tab">
+            <li><a href="/home" {% if sent == False %} class="active_tab" {% endif %}>Received</a></li>
+            <li><a href="/sent" {% if sent == True %} class="active_tab" {% endif %}>Sent</a></li>
+          </ul>
+        </section>
+          <section>
+          <h2>Send a webmention</h2>
+          <p>Use the form below to send a webmention.</p>
+          <form action="/send" method="POST">
+            <input type="text" name="source" placeholder="Source" />
+            <input type="text" name="target" placeholder="Target" />
+            <br />
+            <input type="submit" label="Submit">
+          </form>
+        </section>
+        <section>
+          {% if sent == True %}
+          <h2>Your sent webmentions</h2>
+          <p>Below are all of the webmentions you have sent.</p>
+          {% for w in webmentions %}
+            <ul>
+                <li>
+                  <h3>Webmention from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("/")[2] }} {% endif %}</h3>
+                  <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
+                  <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
+                  <p>Sent on {{ w[2].split(" ")[0] }}</p>
+                  <p>Status: {{ w[3] }}</p>
+                  <p>Message: <code><pre>{{ w[4] }}</pre></code></p>
+                  <hr />
+                </li>
+            </ul>
+          {% endfor %}
+          {% else %}
+          <h2>Your webmentions</h2>
+          <p>Below are the webmentions you have received.</p>
+          {% for w in webmentions %}
+            <ul>
+                <li>
+                  <h3>Webmention from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("/")[2] }} {% endif %}</h3>
+                  <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
+                  <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
+                  <p>Sent on {{ w[2].split(" ")[0] }}</p>
+                  <p>{{ w[3] }}</p>
+                  <hr />
+                </li>
+            </ul>
+          {% endfor %}
+          {% endif %}
+        </section>
+        </section>
+      </div>
+      <p class="accessibility_label"><a href="#main">Go Back to the Top</a></p>
+    </main>
+  </body>
+</html>
