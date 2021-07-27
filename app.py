@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, make_response
 import requests
 import mf2py
 import json
@@ -10,6 +10,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 import os
+import secrets
 
 load_dotenv()
 
@@ -75,9 +76,33 @@ def view_webmentions_page():
     key = request.args.get("key")
 
     if key == os.environ.get("api-key"):
-        return render_template("home.html", webmentions=webmentions, sent=False)
+        return render_template("home.html", webmentions=webmentions, sent=False, key=key)
     else:
-        return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 400
+        return jsonify({"message": "You must be authenticated to view this resource."}), 401
+
+@app.route("/auth")
+def view_auth_page():
+    token = secrets.token_hex(16)
+
+    response = make_response(render_template("auth.html", token=token))
+
+    response.set_cookie("token", token)
+
+    return response
+
+@app.route("/auth/handle")
+def handle_authentication_response_from_indielogin():
+    check_token = request.cookies.get("token")
+
+    if check_token != request.form.get("token"):
+        return redirect("/home", code=302, message="Your authentication token is invalid. Please try signing in again.")
+
+    r = requests.post("https://indielogin.com/auth", headers={"Content-Type": "application/x-www-form-urlencoded"}, data={"code":request.form.get("code"), "redirect_uri": "https://webmention.jamesg.blog/auth/handle", "client_id": os.environ.get("client-id"), "client_id": "https://webmention.jamesg.blog"})
+
+    if r.status_code != 200:
+        return redirect("/auth", code=302, message="There was an error authenticating with the IndieLogin service. Please try again.")
+
+    return redirect("/home", code=302, message="You have successfully authenticated with the IndieLogin service.")
 
 @app.route("/sent")
 def view_sent_webmentions_page():
@@ -90,9 +115,9 @@ def view_sent_webmentions_page():
     key = request.args.get("key")
 
     if key == os.environ.get("api-key"):
-        return render_template("home.html", webmentions=webmentions, sent=True)
+        return render_template("home.html", webmentions=webmentions, sent=True, key=key)
     else:
-        return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 400
+        return jsonify({"message": "You must be authenticated to view this resource."}), 401
 
 @app.route("/send", methods=["POST"])
 def send_webmention():

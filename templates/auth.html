@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Webmention Feed</title>
+    <link rel="stylesheet" href="https://jamesg.blog/assets/styles/styles.css" />
+
+    <link rel="icon" href="https://jamesg.blog/favicon.ico" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      nav li {
+          list-style-type: none;
+          color: black;
+          font-size: 24px;
+          font-weight: 600;
+      }
+      h1 {
+          border-bottom: 5px dotted hotpink;
+          display: inline-block;
+          margin-bottom: 5px;
+      }
+      img {
+	        width: 75% !important;
+      }
+      input {
+        margin-bottom: 10px;
+        display: inline-block;
+      }
+      input[type="submit"] {
+          padding: 10px;
+          border: none;
+          background-color: royalblue;
+          color: white;
+          border-radius: 10px;
+          min-width: 0 !important;
+          appearance: none;
+          margin-top: 10px;
+      }
+      pre {
+        background-color: white;
+        border: 2.5px dotted orange;
+        padding: 2.5px;
+      }
+      .tab {
+        display: inline-block;
+      }
+      .tab li {
+        padding-right: 10px;
+        float: left;
+      }
+      .active_tab {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+        <a href="#main" class="accessibility_label">Skip to main content</a>
+        <div id="main">
+        <section>
+            <h1>James' Webmention Dashboard</h1>
+            <p>Sign in to the webmention dashboard via IndieLogin.com.</p>
+            <form action="https://indielogin.com/auth" method="get">
+                <label for="url">Web Address:</label>
+                <input id="url" type="text" name="me" placeholder="yourdomain.com" />
+                <p><button type="submit">Sign In</button></p>
+                <input type="hidden" name="client_id" value="https://jamesg.blog" />
+                <input type="hidden" name="redirect_uri" value="https://webmention.jamesg.blog/auth/handle" />
+                <input type="hidden" name="state" value="{{ token }}" />
+            </form>
+        </section>
+        </div>
+    </main>
+  </body>
+</html>

@@ -60,10 +60,14 @@
       <div id="main">
         <section>
           <h1>James' Webmention Dashboard</h1>
-          <p>You have received {{ webmentions | length }} webmention{% if webmentions | length > 1 %}s{% endif %}.</p>
+          {% if sent == True %}
+            <p>You have received {{ webmentions | length }} webmention{% if webmentions | length != 1 %}s{% endif %}.</p>
+          {% else %}
+            <p>You have sent {{ webmentions | length }} webmention{% if webmentions | length != 1 %}s{% endif %}.</p>
+          {% endif %}
           <ul class="tab">
-            <li><a href="/home" {% if sent == False %} class="active_tab" {% endif %}>Received</a></li>
-            <li><a href="/sent" {% if sent == True %} class="active_tab" {% endif %}>Sent</a></li>
+            <li><a href="/home?key={{ key }}" {% if sent == False %} class="active_tab" {% endif %}>Received</a></li>
+            <li><a href="/sent?key={{ key }}" {% if sent == True %} class="active_tab" {% endif %}>Sent</a></li>
           </ul>
         </section>
           <section>

@@ -69,6 +69,14 @@ To process webmentions, you should set up a cron job that executes the validate_
 
     0 * * * * python3 /path/to/webmention_receiver/validate_webmention.py
 
+## Authentication
+
+This application uses basic authentication in query parameters. To view the /home and /sent resources, you should append the following query string to the URL you want to access:
+
+    ?key=api-key
+
+api-key should be equal to the value of api-key that you set in your .env file.
+
 ## License
 
 This project is licenced under the MIT License.
