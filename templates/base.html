@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Webmention Feed</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      h1 {
+          display: inline-block;
+          margin-bottom: 5px;
+      }
+      img {
+	        width: 75% !important;
+      }
+      input {
+        margin-bottom: 10px;
+        display: inline-block;
+      }
+      input[type="submit"] {
+          padding: 10px;
+          border: none;
+          background-color: royalblue;
+          color: white;
+          border-radius: 10px;
+          min-width: 0 !important;
+          appearance: none;
+          margin-top: 10px;
+      }
+      pre {
+        background-color: white;
+        border: 2.5px dotted orange;
+        padding: 2.5px;
+      }
+      .tab {
+        display: inline-block;
+      }
+      .tab li {
+        padding-right: 10px;
+        float: left;
+        list-style-type: none;
+      }
+      ol {
+        padding: 0;
+      }
+      .active_tab {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="#main" class="accessibility_label">Skip to main content</a>
+      <nav>
+        <p><a href="/">Webmention Endpoint</a></p>
+        <ul>
+          <li><a href="/home">Received Webmentions</a></li>
+          <li><a href="/sent">Sent Webmentions</a></li>
+          <li><a href="/received">Received (JSON)</a></li>
+        </ul>
+      </nav>
+      <div id="main">
+        {% block content %}
+        {% endblock %}
+      </div>
+      <p class="accessibility_label"><a href="#main">Go Back to the Top</a></p>
+    </main>
+  </body>
+</html>
