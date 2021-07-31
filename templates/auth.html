@@ -5,9 +5,9 @@
       <p>Sign in to the webmention dashboard.</p>
       {% with messages = get_flashed_messages() %}
       {% if messages %}
-          <div class="error">
-              {{ messages[0] }}
-          </div>
+          <p class="error">
+              <em>{{ messages[0] }}</em>
+          </p>
       {% endif %}
       {% endwith %}
       <form action="/login" method="POST">

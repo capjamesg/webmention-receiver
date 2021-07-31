@@ -17,8 +17,11 @@
 	        width: 75% !important;
       }
       input {
+        padding: 10px;
+        border-radius: 10px;
         margin-bottom: 10px;
         display: inline-block;
+        text-align: left;
       }
       input[type="submit"] {
           padding: 10px;
@@ -56,11 +59,14 @@
       <a href="#main" class="accessibility_label">Skip to main content</a>
       <nav>
         <p><a href="/">Webmention Endpoint</a></p>
+        {% if "login" not in request.path %}
         <ul>
           <li><a href="/home">Received Webmentions</a></li>
           <li><a href="/sent">Sent Webmentions</a></li>
           <li><a href="/received">Received (JSON)</a></li>
+          <li><a href="/logout">Logout</a></li>
         </ul>
+        {% endif %}
       </nav>
       <div id="main">
         {% block content %}
