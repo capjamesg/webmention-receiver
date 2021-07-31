@@ -73,7 +73,7 @@ def view_webmentions_page():
     cursor = connection.cursor()
     with connection:
         count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date LIMIT 10 OFFSET ?;", (offset,) ).fetchall()
+        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date DESC LIMIT 10 OFFSET ?;", (offset,) ).fetchall()
 
     return render_template("home.html", webmentions=webmentions, sent=False, page=int(page), page_count=int(int(count) / 10), base_results_query="/home")
 
@@ -118,7 +118,7 @@ def view_sent_webmentions_page():
     cursor = connection.cursor()
     with connection:
         count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-        webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions ORDER BY sent_date LIMIT 10 OFFSET ?;", (offset,)).fetchall()
+        webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions ORDER BY sent_date DESC LIMIT 10 OFFSET ?;", (offset,)).fetchall()
 
     return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent")
 
@@ -177,7 +177,7 @@ def retrieve_sent_webmentions():
         if not target:
             get_webmentions = cursor.execute("SELECT * FROM sent_webmentions;")
         else:
-            get_webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions {} ORDER BY sent_date;").fetchall()
+            get_webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions WHERE target = ? ORDER BY sent_date DESC;", (target, )).fetchall()
 
         webmentions = []
 
@@ -234,7 +234,7 @@ def retrieve_webmentions():
         else:
             return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 400
     else:
-        get_webmentions = cursor.execute("SELECT source, target, contents, received_date, property, content_html, author_name, author_photo, author_url, status FROM webmentions {} ORDER BY received_date;".format(where_clause), attributes).fetchall()
+        get_webmentions = cursor.execute("SELECT source, target, contents, received_date, property, content_html, author_name, author_photo, author_url, status FROM webmentions {} ORDER BY received_date DESC;".format(where_clause), (attributes, )).fetchall()
 
     webmentions = []
 
