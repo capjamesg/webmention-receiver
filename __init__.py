@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import dateutil.parser
 
 # init SQLAlchemy so we can use it later in our models
 db = SQLAlchemy()
@@ -26,9 +27,17 @@ def create_app():
     login_manager = LoginManager()
     login_manager.login_view = 'main.login'
     login_manager.init_app(app)
+    
+    @app.template_filter("convert_time")
+    def _jinja2_filter_datetime(date, fmt=None):
+        date = dateutil.parser.parse(date)
+        native = date.replace(tzinfo=None)
+        format= "%b %d, %Y (%H:%M:%S)"
+        return native.strftime(format) 
 
     # blueprint for non-auth parts of app
     from .main import main as main_blueprint
+
     app.register_blueprint(main_blueprint)
 
     @login_manager.user_loader

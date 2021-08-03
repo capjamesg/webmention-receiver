@@ -31,7 +31,7 @@
             <h3>Webmention to {{ w[1].split("/")[1] }}</h3>
             <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
             <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
-            <p>Sent: {{ w[2].split(" ")[0] }}</p>
+            <p>Sent: {{ w[2] | convert_time }}</p>
             <p>Status: {{ w[3] }}</p>
             <p>Message: <code><pre>{{ w[4] }}</pre></code></p>
             <hr />
@@ -50,7 +50,7 @@
             <h3>Webmention from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("/")[2] }} {% endif %}</h3>
             <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
             <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
-            <p>Sent on {{ w[2].split(" ")[0] }}</p>
+            <p>Sent on {{ w[2] | convert_time }}</p>
             <p>{{ w[3] }}</p>
             <hr />
           </li>
