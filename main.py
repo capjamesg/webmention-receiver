@@ -10,72 +10,81 @@ from . import db
 
 main = Blueprint("main", __name__)
 
+def change_to_json(database_result):
+    columns = [column[0] for column in database_result.description]
+    
+    result = [dict(zip(columns, row)) for row in database_result]
+
+    return result
+
 @main.route("/", methods=["GET", "POST"])
 def receiver():
-    if request.method == "GET":
-        return jsonify({"message": "This is the James' Coffee Blog Webmention receiver."})
-    else:
-        # Process as www-form-encoded as per spec
-        if request.content_type != "application/x-www-form-urlencoded":
-            return jsonify({"message": "Content type must be x-www-url-formencoded."}), 400
-
-        # Use force to get data (result of experimentation)
-        
-        source = request.form.get("source")
-        target = request.form.get("target")
-
-        if not (source.startswith("http://") or source.startswith("https://")) and (target.startswith("http://") or target.startswith("https://")):
-            return jsonify({"message": "Source and target must use http:// or https:// protocols."}), 400
-
-        if source == target:
-            return jsonify({"message": "Source cannot be equal to target."}), 400
-
-        # valid_targets must be a tuple to be compatible with startswith
-        valid_targets = ("https://jamesg.blog", "http://jamesg.blog", "https://www.jamesg.blog", "http://www.jamesg.blog")
-        if not target.startswith(valid_targets):
-            return jsonify({"message": "Target must be a jamesg.blog resource."}), 400
-
+    if current_user.is_authenticated:
+        # Show dashboard if user is authenticated
         connection = sqlite3.connect("webmentions.db")
 
+        page = request.args.get("page")
+
+        if page and page.isnumeric() and int(page) > 0:
+            offset = int(page) * 10
+            page = int(page)
+        else:
+            offset = 0
+            page = 1
+
+        cursor = connection.cursor()
+
         with connection:
-            cursor = connection.cursor()
+            count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
+            webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date DESC LIMIT 10 OFFSET ?;", (offset,) ).fetchall()
 
-            # Delete a webmention if it already exists so a new one can be added
-            get_webmentions_for_url = cursor.execute("SELECT COUNT(source) FROM webmentions WHERE source = ? AND target = ?", (source, target, )).fetchone()
+        return render_template("home.html", webmentions=webmentions, sent=False, page=int(page), page_count=int(int(count) / 10), base_results_query="/home")
 
-            if get_webmentions_for_url[0] > 0:
-                cursor.execute("DELETE FROM webmentions WHERE source = ? AND target = ?", (source ,target,))
-            else:
-                cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), "validating", "", "", ))
+    # If user GETs / and is not authenticated, code below runs
 
-            return jsonify({"message": "Created."}), 201
+    if request.method == "GET":
+        return jsonify({"message": "This is the James' Coffee Blog Webmention receiver."})
+
+    # Process as www-form-encoded as per spec
+    if request.content_type != "application/x-www-form-urlencoded":
+        return jsonify({"message": "Content type must be x-www-url-formencoded."}), 400
+
+    # Use force to get data (result of experimentation)
+    
+    source = request.form.get("source")
+    target = request.form.get("target")
+
+    if not (source.startswith("http://") or source.startswith("https://")) and (target.startswith("http://") or target.startswith("https://")):
+        return jsonify({"message": "Source and target must use http:// or https:// protocols."}), 400
+
+    if source == target:
+        return jsonify({"message": "Source cannot be equal to target."}), 400
+
+    # valid_targets must be a tuple to be compatible with startswith
+    valid_targets = ("https://jamesg.blog", "http://jamesg.blog", "https://www.jamesg.blog", "http://www.jamesg.blog")
+    if not target.startswith(valid_targets):
+        return jsonify({"message": "Target must be a jamesg.blog resource."}), 400
+
+    connection = sqlite3.connect("webmentions.db")
+
+    with connection:
+        cursor = connection.cursor()
+
+        # Delete a webmention if it already exists so a new one can be added
+        get_webmentions_for_url = cursor.execute("SELECT COUNT(source) FROM webmentions WHERE source = ? AND target = ?", (source, target, )).fetchone()
+
+        if get_webmentions_for_url[0] > 0:
+            cursor.execute("DELETE FROM webmentions WHERE source = ? AND target = ?", (source ,target,))
+        else:
+            cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), "validating", "", "", ))
+
+        return jsonify({"message": "Created."}), 201
 
 @main.route("/logout")
 @login_required
 def logout():
     logout_user()
     return redirect("/home")
-
-@main.route("/home")
-@login_required
-def view_webmentions_page():
-    connection = sqlite3.connect("webmentions.db")
-
-    page = request.args.get("page")
-
-    if page and page.isnumeric() and int(page) > 0:
-        offset = int(page) * 10
-        page = int(page)
-    else:
-        offset = 0
-        page = 1
-
-    cursor = connection.cursor()
-    with connection:
-        count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date DESC LIMIT 10 OFFSET ?;", (offset,) ).fetchall()
-
-    return render_template("home.html", webmentions=webmentions, sent=False, page=int(page), page_count=int(int(count) / 10), base_results_query="/home")
 
 @main.route("/login", methods=["GET", "POST"])
 def login():
@@ -161,7 +170,7 @@ def send_webmention():
         return jsonify({"message": r.text}), r.status_code
 
 @main.route("/sent/json")
-def retrieve_sent_webmentions():
+def retrieve_sent_webmentions_json():
     target = request.args.get("target")
     key = request.args.get("key")
 
@@ -179,28 +188,9 @@ def retrieve_sent_webmentions():
         else:
             get_webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions WHERE target = ? ORDER BY sent_date DESC;", (target, )).fetchall()
 
-        webmentions = []
+        result = change_to_json(get_webmentions)
 
-        for source, target, sent_date, status_code, message, webmention_endpoint in get_webmentions:
-            response = {}
-
-            if source:
-                response["source"] = source
-            if target:
-                response["target"] = target
-            if sent_date:
-                response["sent_date"] = sent_date
-            if message:
-                response["message"] = message
-            if status_code:
-                response["status_code"] = status_code
-            if webmention_endpoint:
-                response["webmention_endpoint"] = webmention_endpoint
-
-            webmentions.append(response)
-        print(webmentions)
-
-        return jsonify(webmentions), 200
+        return jsonify(result), 200
 
 @main.route("/received")
 def retrieve_webmentions():
@@ -236,31 +226,6 @@ def retrieve_webmentions():
     else:
         get_webmentions = cursor.execute("SELECT source, target, contents, received_date, property, content_html, author_name, author_photo, author_url, status FROM webmentions {} ORDER BY received_date DESC;".format(where_clause), (attributes, )).fetchall()
 
-    webmentions = []
+    result = change_to_json(get_webmentions)
 
-    for source, target, content, received_date, property, content_html, author_name, author_photo, author_url, status in get_webmentions:
-        response = {}
-
-        if source:
-            response["source"] = source
-        if target:
-            response["target"] = target
-        if content:
-            response["content"] = content
-        if received_date:
-            response["received_date"] = received_date
-        if property:
-            response["property"] = property
-        if content_html:
-            response["content_html"] = content_html
-        if author_name:
-            response["author"] = {"name": "", "photo": "", "url": ""}
-            response["author"]["name"] = author_name
-            response["author"]["photo"] = author_photo
-            response["author"]["url"] = author_url
-        if status:
-            response["status"] = status
-
-        webmentions.append(response)
-
-    return jsonify(webmentions), 200
+    return jsonify(result), 200

@@ -13,18 +13,10 @@ def validate_webmentions():
         get_webmentions_for_url = cursor.execute("SELECT source, target FROM webmentions WHERE status = 'validating'").fetchall()
 
         for u in get_webmentions_for_url:
-            print('x')
             source = u[0]
             target = u[1]
 
-            parse = mf2py.Parser(url=source)
-            h_entry = parse.to_dict(filter_by_type="h-entry")[0]
-
-            # if not (h_entry.get("properties") and h_entry["properties"].get("in-reply-to")):
-            #     contents = "Target must point to jamesg.blog."
-            #     cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
-
-            #     continue
+            print("processing webmention from {} to {}".format(source, target))
                 
             # Only allow 3 redirects before raising an error
             session = requests.Session()
@@ -56,11 +48,12 @@ def validate_webmentions():
                 continue
 
             # If source size is greater than 10 megabytes
-            if int(check_source_size.headers["content-length"]) > 10000000:
-                contents = "Source is too large."
-                cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+            if check_source_size.headers.get("content-length"):
+                if int(check_source_size.headers["content-length"]) > 10000000:
+                    contents = "Source is too large."
+                    cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
-                continue
+                    continue
             
             get_source_for_validation = session.get(source).text
 
@@ -73,23 +66,44 @@ def validate_webmentions():
                 if a["href"] == target:
                     contains_valid_link_to_target = True
 
-            print('d')
-
             # Might want to comment out this if statement for testing
             if contains_valid_link_to_target == False:
                 contents = "Document must contain source URL."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
                 continue
+
+            parse = mf2py.Parser(url=source)
             
             parsed_h_entry = mf2util.interpret_comment(parse.to_dict(), source, target)
 
             # Convert webmention published date to a readable timestamp rather than a datetime object per default (returns error and causes malformed parsing)
             parsed_h_entry["published"] = parsed_h_entry["published"].strftime("%m/%d/%Y %H:%M:%S")
 
-            property = parsed_h_entry
+            if parsed_h_entry.get("author"):
+                author_photo = parsed_h_entry["author"].get("photo")
+                author_url = parsed_h_entry["author"].get("url")
+                author_name = parsed_h_entry["author"].get("name")
+            else:
+                author_photo = None
+                author_url = None
+                author_name = None
 
-            print(parsed_h_entry)
-            cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ? WHERE source = ? AND target = ?", (parsed_h_entry["content-plain"], parsed_h_entry["type"], parsed_h_entry["author"]["name"], parsed_h_entry["author"]["photo"], parsed_h_entry["author"]["url"], parsed_h_entry["content"], "valid", source, target, ))
+            if parsed_h_entry.get("content-plain"):
+                content = parsed_h_entry["content-plain"]
+            else:
+                content = None
+            
+            if parsed_h_entry.get("content"):
+                content_html = parsed_h_entry["content"]
+            else:
+                content_html = None
+
+            cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ? WHERE source = ? AND target = ?",(content, parsed_h_entry["type"], author_name, author_photo, author_url, content_html, "valid", source, target, ))
+            
             connection.commit()
+
+        print("{} Webmentions processed.".format(len(get_webmentions_for_url)))
+
 validate_webmentions()
+
