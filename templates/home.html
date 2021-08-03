@@ -22,6 +22,9 @@
     {% if sent == True %}
     <h2>Your sent webmentions</h2>
     <p>Below are all of the webmentions you have sent.</p>
+    {% if webmentions | length == 0 %}
+    <p>You have not sent any webmentions yet.</p>
+    {% endif %}
     {% for w in webmentions %}
       <ul>
           <li>
@@ -38,6 +41,9 @@
     {% else %}
     <h2>Your webmentions</h2>
     <p>Below are the webmentions you have received.</p>
+    {% if webmentions | length == 0 %}
+    <p>You have not received any webmentions yet.</p>
+    {% endif %}
     {% for w in webmentions %}
       <ul>
           <li>
