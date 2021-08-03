@@ -180,8 +180,8 @@ def retrieve_sent_webmentions_json():
         
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-        if not get_key:
-            return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 400
+        if (get_key and len(get_key) > 0) or current_user.is_authenticated:
+            return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 403
 
         if not target:
             get_webmentions = cursor.execute("SELECT * FROM sent_webmentions;")
@@ -217,12 +217,12 @@ def retrieve_webmentions():
         attributes = (target, property, )
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
+    
+    if not (get_key and len(get_key) > 0) or current_user.is_authenticated == False:
+        return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
     if not target:
-        if get_key and len(get_key) > 0:
-            get_webmentions = cursor.execute("SELECT * FROM webmentions;")
-        else:
-            return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 400
+        get_webmentions = cursor.execute("SELECT * FROM webmentions;")
     else:
         get_webmentions = cursor.execute("SELECT source, target, contents, received_date, property, content_html, author_name, author_photo, author_url, status FROM webmentions {} ORDER BY received_date DESC;".format(where_clause), (attributes, )).fetchall()
 
