@@ -180,7 +180,7 @@ def retrieve_sent_webmentions_json():
         
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-        if (get_key and len(get_key) > 0) or current_user.is_authenticated:
+        if (get_key and len(get_key) > 0) or current_user.is_authenticated == False:
             return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 403
 
         if not target:
