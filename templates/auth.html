@@ -12,10 +12,10 @@
       {% endwith %}
       <form action="/login" method="POST">
           <label for="username">Your username:</label><br />
-          <input type="username" name="username" placeholder="Your username" /><br />
+          <input type="username" name="username" id="username" placeholder="Your username" /><br />
           <label for="password">Your password:</label><br />
-          <input type="password" name="password" placeholder="Your password" /><br />
-          <p><button type="submit">Sign In</button></p>
+          <input type="password" name="password" id="password" placeholder="Your password" /><br />
+          <button type="submit">Sign In</button>
       </form>
   </section>
 {% endblock %}

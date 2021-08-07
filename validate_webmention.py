@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 
 def validate_webmentions():
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
     
     cursor = connection.cursor()
 

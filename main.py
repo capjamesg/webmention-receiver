@@ -6,6 +6,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from bs4 import BeautifulSoup
 import sqlite3
 from .models import User
+from .config import ROOT_DIRECTORY
 from . import db
 
 main = Blueprint("main", __name__)
@@ -21,7 +22,7 @@ def change_to_json(database_result):
 def receiver():
     if current_user.is_authenticated:
         # Show dashboard if user is authenticated
-        connection = sqlite3.connect("webmentions.db")
+        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
         page = request.args.get("page")
 
@@ -65,7 +66,7 @@ def receiver():
     if not target.startswith(valid_targets):
         return jsonify({"message": "Target must be a jamesg.blog resource."}), 400
 
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
     with connection:
         cursor = connection.cursor()
@@ -113,7 +114,7 @@ def login():
 @main.route("/sent")
 @login_required
 def view_sent_webmentions_page():
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
     page = request.args.get("page")
 
@@ -132,6 +133,7 @@ def view_sent_webmentions_page():
     return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent")
 
 @main.route("/send", methods=["POST"])
+@login_required
 def send_webmention():
     source = request.form.get("source")
     target = request.form.get("target")
@@ -158,7 +160,7 @@ def send_webmention():
     r = requests.post(endpoint, data={"source": source, "target": target}, headers={"Content-Type": "application/x-www-form-urlencoded"})
 
     # Add webmentions to sent_webmentions table
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
     with connection:
         cursor = connection.cursor()
@@ -174,13 +176,13 @@ def retrieve_sent_webmentions_json():
     target = request.args.get("target")
     key = request.args.get("key")
 
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
     with connection:
         cursor = connection.cursor()
         
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-        if (get_key and len(get_key) > 0) or current_user.is_authenticated == False:
+        if (not get_key and len(get_key) == 0) or current_user.is_authenticated == False:
             return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 403
 
         if not target:
@@ -198,7 +200,7 @@ def retrieve_webmentions():
     property = request.args.get("property")
     key = request.args.get("key")
 
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
     cursor = connection.cursor()
 
@@ -218,7 +220,7 @@ def retrieve_webmentions():
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
     
-    if not (get_key and len(get_key) > 0) or current_user.is_authenticated == False:
+    if (not get_key and len(get_key) == 0) or current_user.is_authenticated == False:
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
     if not target:

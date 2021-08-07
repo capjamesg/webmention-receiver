@@ -13,6 +13,9 @@ main {
 	width: 85%;
 	margin: auto;
 }
+p, code, li {
+	font-size: 1.0625rem;
+  }
 nav {
 	display: flex;
 	justify-content: space-between;

@@ -12,8 +12,10 @@
     <h2>Send a webmention</h2>
     <p>Use the form below to send a webmention.</p>
     <form action="/send" method="POST">
-      <input type="text" name="source" placeholder="Source" />
-      <input type="text" name="target" placeholder="Target" />
+      <label for="source">Webmention source:</label><br>
+      <input type="text" name="source" id="source" placeholder="Source" />
+      <label for="target">Webmention target:</label><br>
+      <input type="text" name="target" id="target" placeholder="Target" />
       <br />
       <input type="submit" value="Submit Webmention">
     </form>
