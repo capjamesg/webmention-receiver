@@ -8,6 +8,7 @@ import sqlite3
 from .models import User
 from .config import ROOT_DIRECTORY
 from . import db
+import math
 
 main = Blueprint("main", __name__)
 
@@ -26,8 +27,8 @@ def receiver():
 
         page = request.args.get("page")
 
-        if page and page.isnumeric() and int(page) > 0:
-            offset = int(page) * 10
+        if page and int(page) > 1:
+            offset = (int(page) - 1) * 10
             page = int(page)
         else:
             offset = 0
@@ -39,7 +40,7 @@ def receiver():
             count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
             webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date DESC LIMIT 10 OFFSET ?;", (offset,) ).fetchall()
 
-        return render_template("home.html", webmentions=webmentions, sent=False, page=int(page), page_count=int(int(count) / 10), base_results_query="/home")
+        return render_template("home.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/")
 
     # If user GETs / and is not authenticated, code below runs
 
@@ -182,7 +183,7 @@ def retrieve_sent_webmentions_json():
         
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-        if (not get_key and len(get_key) == 0) or current_user.is_authenticated == False:
+        if (get_key and len(get_key) == 0) or current_user.is_authenticated == False:
             return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 403
 
         if not target:
@@ -220,7 +221,7 @@ def retrieve_webmentions():
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
     
-    if (not get_key and len(get_key) == 0) or current_user.is_authenticated == False:
+    if (get_key and len(get_key) == 0) or current_user.is_authenticated == False:
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
     if not target:

@@ -3,6 +3,24 @@ import mf2py
 import mf2util
 import requests
 from bs4 import BeautifulSoup
+from config import ROOT_DIRECTORY
+
+def validate_headers(request_item, cursor):
+    validated = True
+    if request_item.headers.get("Content-Length"):
+        if int(request_item.headers["Content-Length"]) > 10000000:
+            contents = "Source is too large."
+            cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+
+            validated = False
+
+    if "text/html" not in request_item.headers["Content-Type"]:
+        contents = "This endpoint only supports HTML webmentions."
+        cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+
+        validated = False
+
+    return validated
 
 def validate_webmentions():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
@@ -24,6 +42,8 @@ def validate_webmentions():
 
             try:
                 check_source_size = session.head(source, timeout=5)
+
+                validated_headers = validate_headers(check_source_size, cursor)
             except requests.exceptions.TooManyRedirects:
                 contents = "Source redirected too many times."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
@@ -34,29 +54,18 @@ def validate_webmentions():
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
                 continue
+
+            get_source_for_validation = session.get(source).text
+
+            if not validated_headers:
+                validated_headers = validate_headers(check_source_size, cursor)
         
-            if check_source_size.status_code != 200:
+            if get_source_for_validation.status_code != 200:
                 contents = "Webmention target is invalid."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
                 continue
-        
-            if "text/html" not in check_source_size.headers["Content-Type"]:
-                contents = "This endpoint only supports HTML webmentions."
-                cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
-
-                continue
-
-            # If source size is greater than 10 megabytes
-            if check_source_size.headers.get("content-length"):
-                if int(check_source_size.headers["content-length"]) > 10000000:
-                    contents = "Source is too large."
-                    cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
-
-                    continue
             
-            get_source_for_validation = session.get(source).text
-
             soup = BeautifulSoup(get_source_for_validation, "html.parser")
 
             all_anchors = soup.find_all("a")

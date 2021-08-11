@@ -5,7 +5,7 @@
     {% if sent == True %}
       <p>You have sent {{ webmentions | length }} webmention{% if webmentions | length != 1 %}s{% endif %}.</p>
     {% else %}
-      <p>You have received {{ webmentions | length }} webmention{% if webmentions | length != 1 %}s{% endif %}.</p>
+      <p>You have received {{ received_count }} webmention{% if received_count != 1 %}s{% endif %}.</p>
     {% endif %}
   </section>
     <section>
@@ -13,10 +13,9 @@
     <p>Use the form below to send a webmention.</p>
     <form action="/send" method="POST">
       <label for="source">Webmention source:</label><br>
-      <input type="text" name="source" id="source" placeholder="Source" />
+      <input type="text" name="source" id="source" placeholder="Source" /><br>
       <label for="target">Webmention target:</label><br>
-      <input type="text" name="target" id="target" placeholder="Target" />
-      <br />
+      <input type="text" name="target" id="target" placeholder="Target" /><br>
       <input type="submit" value="Submit Webmention">
     </form>
   </section>
@@ -26,7 +25,7 @@
     <p>Below are all of the webmentions you have sent.</p>
     {% if webmentions | length == 0 %}
     <p>You have not sent any webmentions yet.</p>
-    {% endif %}
+    {% else %}
     {% for w in webmentions %}
       <ul>
           <li>
@@ -40,12 +39,13 @@
           </li>
       </ul>
     {% endfor %}
+    {% endif %}
     {% else %}
     <h2>Your webmentions</h2>
     <p>Below are the webmentions you have received.</p>
     {% if webmentions | length == 0 %}
     <p>You have not received any webmentions yet.</p>
-    {% endif %}
+    {% else %}
     {% for w in webmentions %}
       <ul>
           <li>
@@ -53,11 +53,12 @@
             <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
             <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
             <p>Sent on {{ w[2] | convert_time }}</p>
-            <p>{{ w[3] }}</p>
+            <p>{{ " ".join(w[3].split(" ")[:75]) }}</p>
             <hr />
           </li>
       </ul>
     {% endfor %}
+    {% endif %}
     {% endif %}
   </section>
   <ol class="tab">
