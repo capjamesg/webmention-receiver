@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect, flash, Blueprint
+from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory
 import requests
 from werkzeug.security import check_password_hash
 import datetime
@@ -6,7 +6,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from bs4 import BeautifulSoup
 import sqlite3
 from .models import User
-from .config import ROOT_DIRECTORY
+from .config import ROOT_DIRECTORY, SITE_URL
 from . import db
 import math
 
@@ -63,7 +63,7 @@ def receiver():
         return jsonify({"message": "Source cannot be equal to target."}), 400
 
     # valid_targets must be a tuple to be compatible with startswith
-    valid_targets = ("https://jamesg.blog", "http://jamesg.blog", "https://www.jamesg.blog", "http://www.jamesg.blog")
+    valid_targets = ("https://{}".format(SITE_URL), "http://{}".format(SITE_URL), "https://www.{}".format(SITE_URL), "http://www.{}".format(SITE_URL))
     if not target.startswith(valid_targets):
         return jsonify({"message": "Target must be a jamesg.blog resource."}), 400
 

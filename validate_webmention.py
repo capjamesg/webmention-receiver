@@ -4,6 +4,7 @@ import mf2util
 import requests
 from bs4 import BeautifulSoup
 from config import ROOT_DIRECTORY
+from create_rss_feed import generate_feed
 
 def validate_headers(request_item, cursor):
     validated = True
@@ -116,3 +117,4 @@ def validate_webmentions():
 
 validate_webmentions()
 
+generate_feed()

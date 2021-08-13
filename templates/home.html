@@ -53,7 +53,7 @@
             <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
             <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
             <p>Sent on {{ w[2] | convert_time }}</p>
-            <p>{{ " ".join(w[3].split(" ")[:75]) }}</p>
+            <p>{{ " ".join(w[3].split(" ")[:75]) }} {% if w[3].split(" ") | length > 75 %}<a href="{{ w[0] }}">Read more</a>{% endif%}</p>
             <hr />
           </li>
       </ul>
