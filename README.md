@@ -1,6 +1,6 @@
 # Python Webmention Receiver
 
-This project contains the source code behind [webmention.jamesg.blog](https://webmention.jamesg.blog), my private webmention receiver. There is also an endpoint for sending webmentions in this codebase.
+This project contains the source code for a webmention receiver. There is also an endpoint for sending webmentions in this codebase.
 
 If you have not heard of webmentions, I would encourage you to check out the [IndieWeb wiki webmentions page](https://indieweb.org/Webmention) to learn more. In short, webmentions are a way for you to send a message from one website to another. This approach lets you maintain control over your own content while also allowing you to share your content with others.
 
