@@ -19,6 +19,7 @@ def create_app():
 
     app.config['SECRET_KEY'] = 'capjamesgsecretkey555'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///webmentions.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
 
