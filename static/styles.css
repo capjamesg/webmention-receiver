@@ -12,6 +12,7 @@ main {
 	max-width: 100vh;
 	width: 85%;
 	margin: auto;
+	margin-top: 10px;
 }
 p, code, li {
 	font-size: 1.0625rem;
@@ -91,10 +92,6 @@ img {
 footer {
 	text-align: center;
 	margin-top: 5px;
-}
-input[type="text"] {
-	border-radius: 5px;
-	padding: 5px;
 }
 .flex_left_home {
 	flex: 0 60%;
@@ -204,6 +201,69 @@ article img, .blogList img {
 p, li, h1, h2, h3 {
 	line-height: 1.5em;
 }
+a:focus {
+	background-color: #006BD6;
+	color: white;
+	outline: lightblue 2px;
+	border-bottom: 2px dotted black;
+}
+
+input[type="text"]:focus, input[type="url"]:focus, input[type="number"]:focus, textarea:focus, input[type="text"]:focus, input[type="username"]:focus, input[type="password"]:focus {
+	outline: 3px solid royalblue;
+}
+
+button:focus, input[type="submit"]:focus {
+	background-color: yellow;
+	color: black;
+	outline: 3px royalblue solid;
+}
+
+a:hover {
+	color: #0000CD;
+}
+input[type="text"], input[type="username"], input[type="password"], input[type="url"] {
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    display: inline-block;
+    text-align: left;
+    min-width: 50%;
+    font-size: 1.0625rem;
+}
+input[type="submit"] {
+    padding: 10px;
+    border: none;
+    background-color: royalblue;
+    color: white;
+    border-radius: 10px;
+    min-width: 0 !important;
+    appearance: none;
+    font-size: 1.1875rem;
+}
+::-webkit-input-placeholder {
+	color: #767676;
+	opacity: 1;
+}
+
+:-moz-placeholder { /* Firefox 18- */
+	color: #767676;
+	opacity: 1;
+}
+
+::-moz-placeholder {  /* Firefox 19+ */
+	color: #767676;
+	opacity: 1;
+}
+
+:-ms-input-placeholder {
+	color: #767676;
+	opacity: 1;
+}
+
+.error {
+	font-weight: 600;
+}
+
 @media print {
 	html {
 		background-color: white;
@@ -237,4 +297,47 @@ p, li, h1, h2, h3 {
 	article img, .blogList img {
 		width: 100% !important;
 	}
+}
+h1 {
+	display: inline-block;
+	margin-bottom: 5px;
+}
+img {
+	  width: 75% !important;
+}
+input {
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  display: inline-block;
+  text-align: left;
+}
+input[type="submit"] {
+	padding: 10px;
+	border: none;
+	background-color: royalblue;
+	color: white;
+	border-radius: 10px;
+	min-width: 0 !important;
+	appearance: none;
+	margin-top: 10px;
+}
+pre {
+  background-color: white;
+  border: 2.5px dotted orange;
+  padding: 2.5px;
+}
+.tab {
+  display: inline-block;
+}
+.tab li {
+  padding-right: 10px;
+  float: left;
+  list-style-type: none;
+}
+ol {
+  padding: 0;
+}
+.active_tab {
+  font-weight: 600;
 }

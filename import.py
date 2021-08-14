@@ -35,6 +35,6 @@ with connection:
 
         status = "valid"
 
-        cursor.execute("INSERT INTO webmentions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (source, target, property, contents, author_name, author_photo, author_url, content_html, received_date, status))
+        cursor.execute("INSERT INTO webmentions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (None, source, target, property, contents, author_name, author_photo, author_url, content_html, received_date, status))
 
         print("added webmention from {} to {} to db".format(source, target))

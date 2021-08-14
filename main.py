@@ -1,4 +1,4 @@
-from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory
+from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort
 import requests
 from werkzeug.security import check_password_hash
 import datetime
@@ -34,13 +34,20 @@ def receiver():
             offset = 0
             page = 1
 
+        sort_param = request.args.get("sort")
+
+        if sort_param == "oldest":
+            sort_order = "ASC"
+        else:
+            sort_order = "DESC"
+
         cursor = connection.cursor()
 
         with connection:
             count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-            webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date DESC LIMIT 10 OFFSET ?;", (offset,) ).fetchall()
+            webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,) ).fetchall()
 
-        return render_template("home.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/")
+        return render_template("home.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
 
     # If user GETs / and is not authenticated, code below runs
 
@@ -62,10 +69,14 @@ def receiver():
     if source == target:
         return jsonify({"message": "Source cannot be equal to target."}), 400
 
+    # Make sure source and target are not identical when a trailing slash is removed from both
+    if source.strip("/") == target.strip("/"):
+        return jsonify({"message": "Source cannot be equal to target."}), 400
+
     # valid_targets must be a tuple to be compatible with startswith
     valid_targets = ("https://{}".format(SITE_URL), "http://{}".format(SITE_URL), "https://www.{}".format(SITE_URL), "http://www.{}".format(SITE_URL))
     if not target.startswith(valid_targets):
-        return jsonify({"message": "Target must be a jamesg.blog resource."}), 400
+        return jsonify({"message": "Target must be a {} resource.".format(SITE_URL)}), 400
 
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -110,7 +121,7 @@ def login():
         if current_user.is_authenticated:
             return redirect("/home")
 
-        return render_template("auth.html")
+        return render_template("auth.html", title="Webmention Dashboard Login")
 
 @main.route("/sent")
 @login_required
@@ -125,52 +136,81 @@ def view_sent_webmentions_page():
     else:
         offset = 0
         page = 1
+
+    sort_param = request.args.get("sort")
+
+    if sort_param == "oldest":
+        sort_order = "ASC"
+    else:
+        sort_order = "DESC"
     
     cursor = connection.cursor()
+
     with connection:
-        count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-        webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions ORDER BY sent_date DESC LIMIT 10 OFFSET ?;", (offset,)).fetchall()
+        count = cursor.execute("SELECT COUNT(*) FROM sent_webmentions").fetchone()[0]
+        webmentions = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
 
-    return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent")
+    return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions")
 
-@main.route("/send", methods=["POST"])
+@main.route("/sent/<wm>")
 @login_required
-def send_webmention():
-    source = request.form.get("source")
-    target = request.form.get("target")
-
-    # set up bs4
-    r = requests.get(target)
-
-    soup = BeautifulSoup(r.text, "lxml")
-
-    a_webmention_tag = soup.find("a", {"rel": "webmention"})
-    link_webmention_tag = soup.find("link", {"rel": "webmention"})
-
-    if link_webmention_tag:
-        endpoint = link_webmention_tag["href"]
-    elif a_webmention_tag:
-        endpoint = a_webmention_tag["href"]
-    else:
-        return jsonify({"message": "No endpoint could be found for this resource."}), 401
-
-    if endpoint.startswith("/"):
-        endpoint = "https://" + target.split("/")[2] + endpoint
-    
-    # make post request to endpoint with source and target as values
-    r = requests.post(endpoint, data={"source": source, "target": target}, headers={"Content-Type": "application/x-www-form-urlencoded"})
-
-    # Add webmentions to sent_webmentions table
+def view_sent_webmention(wm):
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
     with connection:
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), r.status_code, r.text, endpoint, ))
+        webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
+        
+        if webmention:
+            return render_template("webmention.html", webmention=webmention, title="Webmention to {} Details".format(webmention[1]))
+        else:
+            return abort(404)
 
-    if r.status_code != 200 and r.status_code != 201 and r.status_code != 202:
-        return jsonify({"message": r.text}), r.status_code
-    else:
-        return jsonify({"message": r.text}), r.status_code
+@main.route("/send", methods=["GET", "POST"])
+@login_required
+def send_webmention():
+    if request.method == "POST":
+        source = request.form.get("source")
+        target = request.form.get("target")
+
+        if not target.startswith("https://"):
+            flash("Target must use https:// protocol.")
+            return redirect("/send")
+
+        # set up bs4
+        r = requests.get(target)
+
+        soup = BeautifulSoup(r.text, "lxml")
+
+        a_webmention_tag = soup.find("a", {"rel": "webmention"})
+        link_webmention_tag = soup.find("link", {"rel": "webmention"})
+
+        if link_webmention_tag:
+            endpoint = link_webmention_tag["href"]
+        elif a_webmention_tag:
+            endpoint = a_webmention_tag["href"]
+        else:
+            flash("No endpoint could be found for this resource.")
+            return redirect("/send")
+
+        if endpoint.startswith("/"):
+            endpoint = "https://" + target.split("/")[2] + endpoint
+        
+        # make post request to endpoint with source and target as values
+        r = requests.post(endpoint, data={"source": source, "target": target}, headers={"Content-Type": "application/x-www-form-urlencoded"})
+
+        # Add webmentions to sent_webmentions table
+        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+        with connection:
+            cursor = connection.cursor()
+            cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), r.status_code, r.text, endpoint, ))
+            id = cursor.lastrowid
+
+        flash("success")
+        return redirect("/sent/{}".format(id))
+
+    return render_template("send_webmention.html", title="Send a Webmention")
 
 @main.route("/sent/json")
 def retrieve_sent_webmentions_json():

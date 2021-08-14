@@ -8,33 +8,31 @@
       <p>You have received {{ received_count }} webmention{% if received_count != 1 %}s{% endif %}.</p>
     {% endif %}
   </section>
-    <section>
-    <h2>Send a webmention</h2>
-    <p>Use the form below to send a webmention.</p>
-    <form action="/send" method="POST">
-      <label for="source">Webmention source:</label><br>
-      <input type="text" name="source" id="source" placeholder="Source" /><br>
-      <label for="target">Webmention target:</label><br>
-      <input type="text" name="target" id="target" placeholder="Target" /><br>
-      <input type="submit" value="Submit Webmention">
-    </form>
-  </section>
   <section>
     {% if sent == True %}
     <h2>Your sent webmentions</h2>
-    <p>Below are all of the webmentions you have sent.</p>
     {% if webmentions | length == 0 %}
     <p>You have not sent any webmentions yet.</p>
     {% else %}
+    {% if sort == "oldest" %}
+      <p>Below are the webmentions you have sent, sorted in order of the webmentions sent longest ago.</p>
+      <p><a href="/?sort">Click to sort webmentions in order of the newest first.</a></p>
+      <hr>
+    {% else %}
+      <p>Below are the webmentions you have sent, sorted in order of the webmentions sent most recently.</p>
+      <p><a href="/?sort=oldest">Click to sort webmentions in order of the oldest first.</a></p>
+      <hr>
+    {% endif %}
     {% for w in webmentions %}
       <ul>
           <li>
-            <h3>Webmention to {{ w[1].split("/")[1] }}</h3>
-            <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
-            <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
-            <p>Sent: {{ w[2] | convert_time }}</p>
-            <p>Status: {{ w[3] }}</p>
-            <p>Message: <code><pre>{{ w[4] }}</pre></code></p>
+            <h3>Webmention to {{ w[2].split("//")[1] }}</h3>
+            <p>Target: <a href="{{ w[2] }}">{{ w[2] }}</a></p>
+            <p>Source: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
+            <p>Sent: {{ w[3] | convert_time }}</p>
+            <p>Status: {{ w[4] }}</p>
+            <p>Message: <code><pre>{{ w[5] }}</pre></code></p>
+            <p><a href="/sent/{{ w[0] }}">See webmention.</a></p>
             <hr />
           </li>
       </ul>
@@ -42,14 +40,22 @@
     {% endif %}
     {% else %}
     <h2>Your webmentions</h2>
-    <p>Below are the webmentions you have received.</p>
     {% if webmentions | length == 0 %}
     <p>You have not received any webmentions yet.</p>
     {% else %}
+    {% if sort == "oldest" %}
+      <p>Below are the webmentions you have received, sorted in order of the oldest webmentions received.</p>
+      <p><a href="/?sort">Click to sort webmentions in order of the newest first.</a></p>
+      <hr>
+    {% else %}
+      <p>Below are the webmentions you have received, sorted in order of the newest webementions received.</p>
+      <p><a href="/?sort=oldest">Click to sort webmentions in order of the oldest first.</a></p>
+      <hr>
+    {% endif %}
     {% for w in webmentions %}
       <ul>
           <li>
-            <h3>Webmention from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("/")[2] }} {% endif %}</h3>
+            <h3>Webmention from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("//")[1] }} {% endif %}</h3>
             <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
             <p>Source: <a href="{{ w[0] }}">{{ w[0] }}</a></p>
             <p>Sent on {{ w[2] | convert_time }}</p>

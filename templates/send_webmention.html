@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Send a webmention</h1>
+<section>
+    <p>Use the form below to send a webmention.</p>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class="error">
+        {% for message in messages %}
+            <li>Error: {{ message }}</li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+    {% endwith %}
+    <form action="/send" method="POST">
+        <label for="source">Webmention source:</label><br>
+        <input type="url" name="source" id="source" placeholder="https://jamesg.blog/your-webmention-source" pattern="https://.*" required/><br>
+        <label for="target">Webmention target:</label><br>
+        <input type="url" name="target" id="target" placeholder="https://jamesg.blog/webmention-target" pattern="https://.*" required/><br>
+        <input type="submit" value="Submit Webmention">
+    </form>
+</section>
+{% endblock %}
