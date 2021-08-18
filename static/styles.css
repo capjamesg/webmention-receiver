@@ -240,25 +240,6 @@ input[type="submit"] {
     appearance: none;
     font-size: 1.1875rem;
 }
-::-webkit-input-placeholder {
-	color: #767676;
-	opacity: 1;
-}
-
-:-moz-placeholder { /* Firefox 18- */
-	color: #767676;
-	opacity: 1;
-}
-
-::-moz-placeholder {  /* Firefox 19+ */
-	color: #767676;
-	opacity: 1;
-}
-
-:-ms-input-placeholder {
-	color: #767676;
-	opacity: 1;
-}
 
 .error {
 	font-weight: 600;
@@ -287,11 +268,6 @@ input[type="submit"] {
 		margin-left: 0.3em;
 		font-style: italic;
 	} 
-	main:after {
-		content: "Published on James' Coffee Blog (jamesg.blog).";
-		font-style: italic;
-		margin-bottom: 20px;
-	}
 }
 @media only screen and (max-width: 750px) {
 	article img, .blogList img {

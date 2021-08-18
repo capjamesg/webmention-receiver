@@ -9,6 +9,7 @@ from .models import User
 from .config import ROOT_DIRECTORY, SITE_URL
 from . import db
 import math
+import time
 
 main = Blueprint("main", __name__)
 
@@ -37,9 +38,9 @@ def receiver():
         sort_param = request.args.get("sort")
 
         if sort_param == "oldest":
-            sort_order = "ASC"
-        else:
             sort_order = "DESC"
+        else:
+            sort_order = "ASC"
 
         cursor = connection.cursor()
 
@@ -150,7 +151,7 @@ def view_sent_webmentions_page():
         count = cursor.execute("SELECT COUNT(*) FROM sent_webmentions").fetchone()[0]
         webmentions = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
 
-    return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions")
+    return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param)
 
 @main.route("/sent/<wm>")
 @login_required
@@ -215,6 +216,7 @@ def send_webmention():
 @main.route("/sent/json")
 def retrieve_sent_webmentions_json():
     target = request.args.get("target")
+    status = request.args.get("status")
     key = request.args.get("key")
 
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
@@ -223,13 +225,20 @@ def retrieve_sent_webmentions_json():
         
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-        if (get_key and len(get_key) == 0) or current_user.is_authenticated == False:
+        if (get_key and len(get_key) == 0) and current_user.is_authenticated == False:
             return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 403
+
+        if status == "valid":
+            status = "AND status = 'valid'"
+        elif status == "invalid":
+            status = "AND status = 'invalid'"
+        else:
+            status = ""
 
         if not target:
             get_webmentions = cursor.execute("SELECT * FROM sent_webmentions;")
         else:
-            get_webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions WHERE target = ? ORDER BY sent_date DESC;", (target, )).fetchall()
+            get_webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions WHERE target = ? {} ORDER BY sent_date ASC;".format(status), (target, )).fetchall()
 
         result = change_to_json(get_webmentions)
 
@@ -248,27 +257,46 @@ def retrieve_webmentions():
     where_clause = ""
 
     if target:
-        where_clause = "WHERE target = ?"
+        where_clause = "WHERE target = ? AND status = 'valid'"
         attributes = (target, )
     
     if property:
-        where_clause = "WHERE property = ?"
+        where_clause = "WHERE property = ? AND status = 'valid'"
         attributes = (property, )
 
     if target and property:
-        where_clause = "WHERE target = ? and property = ?"
+        where_clause = "WHERE target = ? and property = ? AND status = 'valid'"
         attributes = (target, property, )
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
     
-    if (get_key and len(get_key) == 0) or current_user.is_authenticated == False:
+    if (get_key and len(get_key) == 0) and current_user.is_authenticated == False:
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
     if not target:
         get_webmentions = cursor.execute("SELECT * FROM webmentions;")
     else:
-        get_webmentions = cursor.execute("SELECT source, target, contents, received_date, property, content_html, author_name, author_photo, author_url, status FROM webmentions {} ORDER BY received_date DESC;".format(where_clause), (attributes, )).fetchall()
+        get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date ASC;".format(where_clause), attributes, )
 
     result = change_to_json(get_webmentions)
 
-    return jsonify(result), 200
+    # send Access-Control-Allow-Origin header
+    response = jsonify(result)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+
+    return response, 200
+
+@main.route("/rss")
+def rss():
+    key = request.args.get("key")
+
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+    cursor = connection.cursor()
+
+    get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
+    
+    if (get_key and len(get_key) == 0) and current_user.is_authenticated == False:
+        return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
+    
+    return send_from_directory(ROOT_DIRECTORY + "/static/", "webmentions.xml")

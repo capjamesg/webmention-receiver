@@ -14,13 +14,18 @@
       <a href="#main" class="accessibility_label">Skip to main content</a>
       <nav>
         <p><a href="/">Webmention Endpoint</a></p>
-        {% if "login" not in request.path %}
+        {% if current_user.is_authenticated %}
         <ul>
           <li><a href="/send">Send a Webmention</a></li>
           <li><a href="/sent">Sent Webmentions</a></li>
           <li><a href="/received">Received (JSON)</a></li>
           <li><a href="/sent/json">Sent (JSON)</a></li>
+          <li><a href="/rss">RSS Feed</a></li>
           <li><a href="/logout">Logout</a></li>
+        </ul>
+        {% else %}
+        <ul>
+          <li><a href="/login">Login</a></li>
         </ul>
         {% endif %}
       </nav>

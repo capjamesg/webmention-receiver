@@ -1,4 +1,5 @@
 from feedgen.feed import FeedGenerator
+from config import ROOT_DIRECTORY
 import sqlite3
 
 fg = FeedGenerator()
@@ -13,23 +14,25 @@ def generate_feed():
     fg.description("Webmentions sent to webmention.jamesg.blog")
     fg.language("en")
 
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "webmentions.db")
 
     with connection:
         cursor = connection.cursor()
         # Create RSS feed for all webmentions
-        webmentions = cursor.execute("SELECT source, target, received_date, contents FROM webmentions ORDER BY received_date DESC;").fetchall()
-
+        webmentions = cursor.execute("SELECT source, target, received_date, contents FROM webmentions ORDER BY received_date ASC LIMIT 10;").fetchall()
         for webmention in webmentions:
-            fe = fg.add_entry()
-            fe.id(webmention[0])
-            fe.title(webmention[0])
-            fe.link(href=webmention[3], rel='alternate')
-            fe.link(href=webmention[2], rel='self')
-            if webmention[3]:
-                fe.description(webmention[3])
-            else:
-                fe.description("Webmention sent from {} to {} on {}.".format(webmention[0], webmention[1], webmention[2]))
+
+            # Exclude Bridgy webmentions as I may receive a lot of them
+            if "brid.gy" not in webmention[0]:
+                fe = fg.add_entry()
+                fe.id(webmention[0])
+                fe.title(webmention[0])
+                fe.link(href=webmention[3], rel='alternate')
+                fe.link(href=webmention[2], rel='self')
+                if webmention[3]:
+                    fe.description(webmention[3])
+                else:
+                    fe.description("Webmention sent from {} to {} on {}.".format(webmention[0], webmention[1], webmention[2]))
 
     fg.rss_file("static/webmentions.xml")
 
