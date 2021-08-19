@@ -38,9 +38,9 @@ def receiver():
         sort_param = request.args.get("sort")
 
         if sort_param == "oldest":
-            sort_order = "DESC"
-        else:
             sort_order = "ASC"
+        else:
+            sort_order = "DESC"
 
         cursor = connection.cursor()
 
@@ -84,15 +84,14 @@ def receiver():
     with connection:
         cursor = connection.cursor()
 
-        # Delete a webmention if it already exists so a new one can be added
-        get_webmentions_for_url = cursor.execute("SELECT COUNT(source) FROM webmentions WHERE source = ? AND target = ?", (source, target, )).fetchone()
+        already_sent_from_source = cursor.execute("SELECT source, target FROM webmentions WHERE source = ?", (target, )).fetchall()
 
-        if get_webmentions_for_url[0] > 0:
-            cursor.execute("DELETE FROM webmentions WHERE source = ? AND target = ?", (source ,target,))
-        else:
-            cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), "validating", "", "", ))
+        for a in already_sent_from_source:
+            cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (a[0], a[1], str(datetime.datetime.now()), "validating", "", "", ))
+        
+        cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), "validating", "", "", ))
 
-        return jsonify({"message": "Created."}), 201
+        return jsonify({"message": "Accepted."}), 202
 
 @main.route("/logout")
 @login_required
@@ -179,23 +178,52 @@ def send_webmention():
             return redirect("/send")
 
         # set up bs4
-        r = requests.get(target)
+        r = requests.get(target, allow_redirects=True)
 
         soup = BeautifulSoup(r.text, "lxml")
 
         a_webmention_tag = soup.find("a", {"rel": "webmention"})
         link_webmention_tag = soup.find("link", {"rel": "webmention"})
+        link_header = r.headers.get("Link")
 
-        if link_webmention_tag:
-            endpoint = link_webmention_tag["href"]
-        elif a_webmention_tag:
-            endpoint = a_webmention_tag["href"]
-        else:
+        endpoint = None
+
+        if link_header:
+            parsed_links = requests.utils.parse_header_links(link_header.rstrip('>').replace('>,<', ',<'))
+
+            for link in parsed_links:
+                if "webmention" in link["rel"]:
+                    endpoint = link["url"]
+                    break
+
+        if endpoint == None:
+            for item in soup():
+                if item.get("rel"):
+                if item.name == "a" and item.get("rel") and item["rel"][0] == "webmention":
+                    endpoint = item.get("href")
+                    break
+                elif item.name == "link" and item.get("rel") and item["rel"][0] == "webmention":
+                    endpoint = item.get("href")
+                    break
+
+        if endpoint == None:
             flash("No endpoint could be found for this resource.")
             return redirect("/send")
 
+        if endpoint == "":
+            endpoint = target
+
+        if not endpoint.startswith("https://") and not endpoint.startswith("http://") and not endpoint.startswith("/"):
+            if r.history:
+                endpoint = "/".join(r.url.split("/")[:-1]) + "/" + endpoint
+            else:
+                endpoint = "/".join(target.split("/")[:-1]) + "/" + endpoint
+
         if endpoint.startswith("/"):
-            endpoint = "https://" + target.split("/")[2] + endpoint
+            if r.history:
+                endpoint = "https://" + r.url.split("/")[2] + endpoint
+            else:
+                endpoint = "https://" + target.split("/")[2] + endpoint
         
         # make post request to endpoint with source and target as values
         r = requests.post(endpoint, data={"source": source, "target": target}, headers={"Content-Type": "application/x-www-form-urlencoded"})

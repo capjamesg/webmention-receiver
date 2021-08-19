@@ -16,6 +16,47 @@ Here are the endpoints supported by this project:
 - /send - Endpoint to send a webmention.
 - /retrieve - See webmentions you have received in JSON.
 
+## webmention.rocks Validation
+
+[webmention.rocks](https://webmention.rocks/) is being used to test compliance with the webmention specification for receiving and sending webmentions.
+
+## Sender Discovery Compliance
+
+So far, this repository has passed tests in the "sender discovery" category.
+
+- https://webmention.rocks/test/1
+- https://webmention.rocks/test/2
+- https://webmention.rocks/test/3
+- https://webmention.rocks/test/4
+- https://webmention.rocks/test/5
+- https://webmention.rocks/test/6
+- https://webmention.rocks/test/7
+- https://webmention.rocks/test/8
+- https://webmention.rocks/test/9
+- https://webmention.rocks/test/10
+- https://webmention.rocks/test/11
+- https://webmention.rocks/test/12
+- https://webmention.rocks/test/13
+- https://webmention.rocks/test/14
+- https://webmention.rocks/test/15
+- https://webmention.rocks/test/16
+- https://webmention.rocks/test/17
+- https://webmention.rocks/test/18
+- https://webmention.rocks/test/19
+- https://webmention.rocks/test/20
+- 21 IN PROGRESS
+- https://webmention.rocks/test/22
+- https://webmention.rocks/test/23
+
+Please refer to the [webmention.rocks](https://webmention.rocks/) website for specifics on each of these tests and what they mean.
+
+## Reciever Tests
+
+This application has passed the following receiver tests:
+
+- https://webmention.rocks/receive/1
+- https://webmention.rocks/receive/2
+
 ## How to set up
 
 To set up this project, first configure a Python virtual environment:
