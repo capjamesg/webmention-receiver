@@ -62,6 +62,11 @@ def validate_webmentions():
             if not validated_headers:
                 validated_headers = validate_headers(check_source_size, cursor, source, target)
         
+            if check_source_size.status_code != 410:
+                # Support deleted webmention in line with the spec
+                cursor.execute("DELETE FROM webmentions WHERE source = ?;", (source, ))
+
+                continue
             if check_source_size.status_code != 200:
                 contents = "Webmention target is invalid."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
