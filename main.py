@@ -143,14 +143,26 @@ def view_sent_webmentions_page():
         sort_order = "ASC"
     else:
         sort_order = "DESC"
-    
-    cursor = connection.cursor()
 
     with connection:
-        count = cursor.execute("SELECT COUNT(*) FROM sent_webmentions").fetchone()[0]
-        webmentions = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
+        cursor = connection.cursor()
 
-    return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param)
+        count = cursor.execute("SELECT COUNT(id) FROM sent_webmentions").fetchone()[0]
+        to_process = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint, location_header FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
+
+        for c in to_process:
+            print(c[7])
+            if c[7] and c[7] != "" and c[7] != None:
+                print('d')
+                r = requests.get(c[7])
+                cursor.execute("UPDATE sent_webmentions SET response = ?, location_header = ? WHERE source = ? AND target = ?", (str(r.json()), "", c[1], c[2], ))
+
+    with connection:
+        cursor = connection.cursor()
+        
+        webmentions = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint, location_header FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
+
+    return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
 
 @main.route("/sent/<wm>")
 @login_required
@@ -159,6 +171,14 @@ def view_sent_webmention(wm):
 
     with connection:
         cursor = connection.cursor()
+        webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
+
+        if webmention[7] and webmention[7] != "":
+            r = requests.get(webmention[7])
+
+            if r.status_code == 200:
+                cursor.execute("UPDATE sent_webmentions SET response = ? AND location_header = ? WHERE source = ? AND target = ?", (r.text, "", webmention[1], webmention[2], ))
+
         webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
         
         if webmention:
@@ -181,9 +201,7 @@ def send_webmention():
         r = requests.get(target, allow_redirects=True)
 
         soup = BeautifulSoup(r.text, "lxml")
-
-        a_webmention_tag = soup.find("a", {"rel": "webmention"})
-        link_webmention_tag = soup.find("link", {"rel": "webmention"})
+        
         link_header = r.headers.get("Link")
 
         endpoint = None
@@ -198,7 +216,6 @@ def send_webmention():
 
         if endpoint == None:
             for item in soup():
-                if item.get("rel"):
                 if item.name == "a" and item.get("rel") and item["rel"][0] == "webmention":
                     endpoint = item.get("href")
                     break
@@ -231,15 +248,137 @@ def send_webmention():
         # Add webmentions to sent_webmentions table
         connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
-        with connection:
-            cursor = connection.cursor()
-            cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), r.status_code, r.text, endpoint, ))
-            id = cursor.lastrowid
+        if r.headers and r.headers.get("Location"):
+            location_header = r.headers.get("Location")
+        else:
+            location_header = ""
 
-        flash("success")
-        return redirect("/sent/{}".format(id))
+        message = str(r.json())
+
+        try:
+            with connection:
+                cursor = connection.cursor()
+                print('x')
+                cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), r.status_code, message, endpoint, location_header, ))
+                id = cursor.lastrowid
+                cursor.execute("UPDATE sent_webmentions SET response = ? WHERE id = ?", (message, id, ))
+                print('t')
+
+            flash("success")
+            return redirect("/sent/{}".format(id))
+        except:
+            flash("There was an error processing your webmention.")
+            return render_template("send_webmention.html", title="Send a Webmention")
 
     return render_template("send_webmention.html", title="Send a Webmention")
+
+
+@main.route("/send/open", methods=["POST"])
+def send_webmention_anyone():
+    if request.method == "POST":
+        source = request.form.get("source")
+        target = request.form.get("target")
+
+        if not source and not target:
+            message = {
+                "title": "Please enter a source and target.",
+                "description": "Please enter a source and target.",
+                "url": target
+            }
+
+            return render_template("send_open.html", message=message)
+
+
+        if not target.startswith("https://"):
+            message = {
+                "title": "Error: Target must use https:// protocol.",
+                "description": "Target must use https:// protocol.",
+                "url": target
+            }
+
+            return render_template("send_open.html", message=message)
+
+
+        # if domain is not jamesg.blog
+        if not target.startswith("https://jamesg.blog") or target.startswith("http://jamesg.blog"):
+            message = {
+                "title": "Error: Target must be a jamesg.blog post.",
+                "description": "Target must be a jamesg.blog post.",
+                "url": target
+            }
+
+            return render_template("send_open.html", message=message)
+
+        # set up bs4
+        r = requests.get(target, allow_redirects=True)
+
+        soup = BeautifulSoup(r.text, "lxml")
+        
+        link_header = r.headers.get("Link")
+
+        endpoint = None
+
+        if link_header:
+            parsed_links = requests.utils.parse_header_links(link_header.rstrip('>').replace('>,<', ',<'))
+
+            for link in parsed_links:
+                if "webmention" in link["rel"]:
+                    endpoint = link["url"]
+                    break
+
+        if endpoint == None:
+            for item in soup():
+                if item.name == "a" and item.get("rel") and item["rel"][0] == "webmention":
+                    endpoint = item.get("href")
+                    break
+                elif item.name == "link" and item.get("rel") and item["rel"][0] == "webmention":
+                    endpoint = item.get("href")
+                    break
+
+        if endpoint == None:
+            message = {
+                "title": "Error:" + "No endpoint could be found for this resource.",
+                "description": "No endpoint could be found for this resource.",
+                "url": target
+            }
+
+            return render_template("send_open.html", message=message)
+
+
+        if endpoint == "":
+            endpoint = target
+
+        if not endpoint.startswith("https://") and not endpoint.startswith("http://") and not endpoint.startswith("/"):
+            if r.history:
+                endpoint = "/".join(r.url.split("/")[:-1]) + "/" + endpoint
+            else:
+                endpoint = "/".join(target.split("/")[:-1]) + "/" + endpoint
+
+        if endpoint.startswith("/"):
+            if r.history:
+                endpoint = "https://" + r.url.split("/")[2] + endpoint
+            else:
+                endpoint = "https://" + target.split("/")[2] + endpoint
+        
+        # make post request to endpoint with source and target as values
+        r = requests.post(endpoint, data={"source": source, "target": target}, headers={"Content-Type": "application/x-www-form-urlencoded"})
+
+        message = str(r.json()["message"])
+
+        if r.status_code == 200 or r.status_code == 201 or r.status_code == 202:
+            message = {
+                "title": message,
+                "description": message,
+                "url": target
+            }
+        else:
+            message = {
+                "title": "Error: " + message,
+                "description": "Error: " + message,
+                "url": target
+            }
+
+        return render_template("send_open.html", message=message)
 
 @main.route("/sent/json")
 def retrieve_sent_webmentions_json():
@@ -297,14 +436,14 @@ def retrieve_webmentions():
         attributes = (target, property, )
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
-    
-    if (get_key and len(get_key) == 0) and current_user.is_authenticated == False:
-        return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
     if not target:
         get_webmentions = cursor.execute("SELECT * FROM webmentions;")
     else:
         get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date ASC;".format(where_clause), attributes, )
+    
+    if not get_key and current_user.is_authenticated == False and where_clause == "":
+        return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
     result = change_to_json(get_webmentions)
 

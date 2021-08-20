@@ -1,7 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
+{% if error == 404 %}
 <section>
     <h1>404</h1>
     <p>This page could not be found.</p>
 </section>
+{% elif error == 405 %}
+<section>
+    <h1>405</h1>
+    <p>This method is not supported.</p>
+</section>
+{% else %}
+<section>
+    <h1>Error</h1>
+    <p>There was an error and this page could not be loaded.</p>
+</section>
+{% endif %}
 {% endblock %}

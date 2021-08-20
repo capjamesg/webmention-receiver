@@ -3,7 +3,7 @@
   <section>
     <h1>Webmention Dashboard</h1>
     {% if sent == True %}
-      <p>You have sent {{ webmentions | length }} webmention{% if webmentions | length != 1 %}s{% endif %}.</p>
+      <p>You have sent {{ count }} webmention{% if count != 1 %}s{% endif %}.</p>
     {% else %}
       <p>You have received {{ received_count }} webmention{% if received_count != 1 %}s{% endif %}.</p>
     {% endif %}

@@ -11,7 +11,7 @@ db = SQLAlchemy()
 def create_app():
     app = Flask(__name__)
 
-    limiter = Limiter(
+    Limiter(
         app,
         key_func=get_remote_address,
         default_limits=["200 per day", "50 per hour"]
@@ -48,6 +48,10 @@ def create_app():
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("404.html", title="Page not found", error=404), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return render_template("404.html", title="Method not allowed", error=405), 404
 
     return app
 

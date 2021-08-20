@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+{% if message %}
+<h1>{{ message["title"] }}</h1>
+<p>{{ message["description"] }}</p>
+<p><a href="{{ message['url'] }}">Click here to go back to the blog post you were reading.</a></p>
+{% else %}
+<h1>Welcome to my Webmention Receiver</h1>
+<p>There is not much to see here unless you have sent a webmention from my site. I would recommend going back to <a href="https://jamesg.blog">my blog</a>.</p>
+{% endif %}
+{% endblock %}
