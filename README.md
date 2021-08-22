@@ -97,7 +97,8 @@ Use these commands to create the tables necessary to run this project:
         sent_date,
         status_code,
         response
-        webmention_endpoint
+        webmention_endpoint,
+        location_header
     );
 
 After following these steps, you are ready to use the endpoint. To run the server, run this command:
