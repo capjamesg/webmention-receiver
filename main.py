@@ -227,6 +227,10 @@ def send_webmention():
             flash("No endpoint could be found for this resource.")
             return redirect("/send")
 
+        if endpoint == "0.0.0.0" or endpoint == "127.0.0.1" or endpoint == "localhost":
+            flash("This resource is not supported.")
+            return redirect("/send")
+
         if endpoint == "":
             endpoint = target
 
@@ -338,6 +342,15 @@ def send_webmention_anyone():
                 elif item.name == "link" and item.get("rel") and item["rel"][0] == "webmention":
                     endpoint = item.get("href")
                     break
+
+        if endpoint == "0.0.0.0" or endpoint == "127.0.0.1" or endpoint == "localhost":
+            message = {
+                "title": "Error:" + "Your endpoint is not supported.",
+                "description": "Your endpoint is not supported.",
+                "url": target
+            }
+
+            return render_template("send_open.html", message=message)
 
         if endpoint == None:
             message = {
