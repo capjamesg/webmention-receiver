@@ -253,19 +253,20 @@ def send_webmention():
         else:
             location_header = ""
 
-        message = str(r.json())
+        try:
+            message = str(r.json())
+        except:
+            message = r.text
 
         try:
             with connection:
                 cursor = connection.cursor()
-                print('x')
                 cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), r.status_code, message, endpoint, location_header, ))
                 id = cursor.lastrowid
                 cursor.execute("UPDATE sent_webmentions SET response = ? WHERE id = ?", (message, id, ))
-                print('t')
 
             flash("success")
-            return redirect("/sent/{}".format(id))
+            return redirect("/sent/{}".format(id)), 201
         except:
             flash("There was an error processing your webmention.")
             return render_template("send_webmention.html", title="Send a Webmention")
@@ -278,6 +279,9 @@ def send_webmention_anyone():
     if request.method == "POST":
         source = request.form.get("source")
         target = request.form.get("target")
+
+        print(source)
+        print(target)
 
         if not source and not target:
             message = {
