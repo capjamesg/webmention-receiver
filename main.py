@@ -22,7 +22,7 @@ def change_to_json(database_result):
 
 @main.route("/", methods=["GET", "POST"])
 def receiver():
-    if current_user.is_authenticated:
+    if current_user.is_authenticated and request.method == "GET":
         # Show dashboard if user is authenticated
         connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -84,14 +84,42 @@ def receiver():
     with connection:
         cursor = connection.cursor()
 
+        # Rreprocess webmentions from the same source
+        # Ensures all webmentions from source X are updated when a new webmention is sent from that source
+
         already_sent_from_source = cursor.execute("SELECT source, target FROM webmentions WHERE source = ?", (target, )).fetchall()
 
         for a in already_sent_from_source:
             cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (a[0], a[1], str(datetime.datetime.now()), "validating", "", "", ))
+
+        cursor.execute("DELETE FROM webmentions WHERE source = ? and target = ?", (source, target, ))
         
         cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), "validating", "", "", ))
 
         return jsonify({"message": "Accepted."}), 202
+
+@main.route("/delete", methods=["POST"])
+@login_required
+def delete_webmention():
+    if request.method == "POST":
+        target = request.form.get("target")
+        source = request.form.get("source")
+
+        if not target and not source:
+            flash("Please provide a target and a source.")
+            return redirect("/")
+        
+        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+        with connection:
+            cursor = connection.cursor()
+
+            cursor.execute("DELETE FROM webmentions WHERE target = ? AND source = ?", (target, source))
+
+        flash("Webmention from {} has been deleted.".format(target))
+        return redirect("/")
+    else:
+        return abort(405)
 
 @main.route("/logout")
 @login_required
