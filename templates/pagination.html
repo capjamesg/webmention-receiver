@@ -1,0 +1,16 @@
+<ol class="tab">
+    {% if page != 1 %}
+    <li class="pages"><a href="{{ base_results_query }}?page={{ page -1 }}" rel="prev">Previous</a></li>
+    {% endif %}
+    {% for i in range(1, page_count+1) %}
+        {% if i < 3 or i in [page-1, page, page+1] or i in [page_count-1, page_count] %}
+        <li class="pages"><a href="{{ base_results_query }}?page={{ i }}" {% if i == page %}class="active_tab"{% endif %}>{{ i }}</a></li>
+        {% endif %}
+        {% if (i == page-2) or (i == page+2 and page+2 != page_count) %}
+        <li>...</li>
+        {% endif %}
+    {% endfor %}
+    {% if page < page_count %}
+    <li class="pages"><a href="{{ base_results_query }}?page={{ page + 1 }}" rel="next">Next</a></li>
+    {% endif %}
+</ol>
