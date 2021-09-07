@@ -15,7 +15,6 @@ def validate(webmention, *to_validate):
         else:
             return ""
         
-
 with connection:
     cursor = connection.cursor()
 

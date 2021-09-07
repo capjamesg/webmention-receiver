@@ -32,20 +32,20 @@
       <p><a href="/sent?sort=oldest">Sort webmentions in order of the oldest first.</a></p>
       <hr>
     {% endif %}
-    {% for w in webmentions %}
       <ul>
-          <li>
-            <h3>Webmention to {{ w[2].split("//")[1] }}</h3>
-            <p>Target: <a href="{{ w[2] }}">{{ w[2] }}</a></p>
-            <p>Source: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
-            <p>Sent: {{ w[3] | convert_time }}</p>
-            <p>Status: {{ w[4] }}</p>
-            <p>Message: <code><pre>{{ w[5] }}</pre></code></p>
-            <p><a href="/sent/{{ w[0] }}">See webmention.</a></p>
-            <hr />
-          </li>
-      </ul>
-    {% endfor %}
+      {% for w in webmentions %}
+        <li>
+          <h3>Webmention to {{ w[2].split("//")[1] }}</h3>
+          <p>Target: <a href="{{ w[2] }}">{{ w[2] }}</a></p>
+          <p>Source: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
+          <p>Sent: {{ w[3] | convert_time }}</p>
+          <p>Status: {{ w[4] }}</p>
+          <p>Message: <code><pre>{{ w[5] }}</pre></code></p>
+          <p><a href="/sent/{{ w[0] }}">See webmention.</a></p>
+          <hr />
+        </li>
+      {% endfor %}
+    </ul>
     {% endif %}
     {% else %}
     <h2>Your webmentions</h2>
@@ -61,8 +61,8 @@
       <p><a href="/?sort=oldest">Sort webmentions in order of the oldest first.</a></p>
       <hr>
     {% endif %}
-    {% for w in webmentions %}
       <ul>
+      {% for w in webmentions %}
           <li>
             <h3>Webmention from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("//")[1] }} {% endif %}</h3>
             <p>Target: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
@@ -79,8 +79,8 @@
             </form>
             <hr />
           </li>
+        {% endfor %}
       </ul>
-    {% endfor %}
     {% endif %}
     {% endif %}
   </section>

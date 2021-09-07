@@ -14,7 +14,7 @@ def generate_feed():
     fg.description("Webmentions sent to webmention.jamesg.blog")
     fg.language("en")
 
-    connection = sqlite3.connect(ROOT_DIRECTORY + "webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
     with connection:
         cursor = connection.cursor()
@@ -37,3 +37,5 @@ def generate_feed():
     fg.rss_file("static/webmentions.xml")
 
     print("created webmentions.xml RSS feed")
+
+generate_feed()

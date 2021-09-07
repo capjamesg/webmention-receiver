@@ -51,9 +51,6 @@ footer ul {
 	flex-wrap: wrap;
 	list-style-type: none;
 }
-.h-entry ul {
-	list-style-type: disc;
-}
 ul {
 	list-style-type: none;
 	padding-left: 0;
