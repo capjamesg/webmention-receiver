@@ -83,7 +83,6 @@ h1 {
 	width: inherit !important;
 }
 img {
-	width: 100%;
 	border-radius: 10px;
 }
 footer {
@@ -185,9 +184,6 @@ article header, article section {
 .main_image {
 	width: 50%;
 }
-article img, .blogList img {
-	width: 75%;
-}
 .indieweb_footer {
 	padding-bottom: 1em;
 }
@@ -274,9 +270,6 @@ input[type="submit"] {
 h1 {
 	display: inline-block;
 	margin-bottom: 5px;
-}
-img {
-	  width: 75% !important;
 }
 input {
   padding: 10px;

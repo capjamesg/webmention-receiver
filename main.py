@@ -20,37 +20,6 @@ def change_to_json(database_result):
 
     return result
 
-@main.route("/feed", methods=["GET", "POST"])
-def feed():
-    if current_user.is_authenticated and request.method == "GET":
-        # Show dashboard if user is authenticated
-        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
-
-        page = request.args.get("page")
-
-        if page and int(page) > 1:
-            offset = (int(page) - 1) * 10
-            page = int(page)
-        else:
-            offset = 0
-            page = 1
-
-        sort_param = request.args.get("sort")
-
-        if sort_param == "oldest":
-            sort_order = "ASC"
-        else:
-            sort_order = "DESC"
-
-        cursor = connection.cursor()
-
-        with connection:
-            count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-            webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name, author_photo, author_url FROM webmentions WHERE status = 'valid' ORDER BY received_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,) ).fetchall()
-
-        return render_template("feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
-
-
 @main.route("/", methods=["GET", "POST"])
 def receiver():
     if current_user.is_authenticated and request.method == "GET":
@@ -79,7 +48,7 @@ def receiver():
             count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
             webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,) ).fetchall()
 
-        return render_template("home.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
+        return render_template("feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
 
     # If user GETs / and is not authenticated, code below runs
 
