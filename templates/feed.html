@@ -10,18 +10,18 @@
     }
 </style>
 <section class="feed">
-    <h1>Hello, jamesg.blog!</h1>
+    <h1>Hello, {{ session.get("me").replace("https://", "").replace("http://", "").strip("/") }}!</h1>
     <ul>
       {% for w in webmentions %}
         <li>
             {% if w[4] == "like-of" %}
-            {% set post_type = "Like" %}
+            {% set post_type = "❤️ Like" %}
             {% elif w[4] == "mention-of" %}
-            {% set post_type = "Mention" %}
+            {% set post_type = "💬 Mention" %}
             {% elif w[4] == "bookmark-of" %}
-            {% set post_type = "Bookmark" %}
+            {% set post_type = "🔖 Bookmark" %}
             {% else %}
-            {% set post_type = "Webmention" %}
+            {% set post_type = "💬 Webmention" %}
             {% endif %}
         {% if w[3] %}
         <p>{{ " ".join(w[3].split(" ")[:75]) }} {% if w[3].split(" ") | length > 75 %}... <a href="{{ w[0] }}">Read more</a>{% endif %}</p>
@@ -29,10 +29,9 @@
         {% if w[6] %}
         <div><img src="{{ w[6] }}" alt="Profile picture for {{ w[5] }}" height="50" width="50" /><p>Webmention from <a href="{{ w[7] }}">{{ w[5] }}</a></p></div>
         {% else %}
-        <p>Webmention from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("//")[1].split("/")[0] }} {% endif %}</p>
         {% endif %}
         {% endif %}
-          <p>{{ post_type }} to <a href="{{ w[1] }}">{{ w[1] }}</a>. Received on {{ w[2] | convert_time }}.</p>
+          <p>{{ post_type }} from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("//")[1].split("/")[0] }} {% endif %} to <a href="{{ w[1] }}">{{ w[1] }}</a>. Received on {{ w[2] | convert_time }}.</p>
           <form action="/delete" method="POST">
             <input type="hidden" name="source" value="{{ w[0] }}">
             <input type="hidden" name="target" value="{{ w[1] }}">

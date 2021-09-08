@@ -2,20 +2,21 @@
 {% block content %}
   <section>
       <h1>Webmention Dashboard</h1>
-      <p>Sign in to the webmention dashboard.</p>
+      <p>Sign in is powered by IndieAuth which means you can log in to the webmention dashboard with your domain name.</p>
+      <p>Enter your domain name below to log in to the dashboard.</p>
       {% with messages = get_flashed_messages() %}
       {% if messages %}
           <p class="error">
-              <em>{{ messages }}</em>
+              <em>{{ message[0] }}</em>
           </p>
       {% endif %}
       {% endwith %}
-      <form action="/login" method="POST">
-          <label for="username">Your username:</label><br />
-          <input type="username" name="username" id="username" placeholder="Your username" /><br />
-          <label for="password">Your password:</label><br />
-          <input type="password" name="password" id="password" placeholder="Your password" /><br />
-          <input type="submit" value="Sign in">
+      <form action="https://indieauth.com/auth" method="GET">
+        <label for="indie_auth_url">Web Address:</label><br>
+        <input id="indie_auth_url" type="text" name="me" placeholder="yourdomain.com" /><br>
+        <input type="submit" value="Sign In" />
+        <input type="hidden" name="client_id" value="http://localhost:5000/" />
+        <input type="hidden" name="redirect_uri" value="http://localhost:5000/callback" />
       </form>
   </section>
 {% endblock %}
