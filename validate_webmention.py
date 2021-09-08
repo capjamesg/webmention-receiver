@@ -1,6 +1,8 @@
 import sqlite3
 import mf2py
 import mf2util
+import string
+import random
 import requests
 import datetime
 from bs4 import BeautifulSoup
@@ -120,6 +122,26 @@ def validate_webmentions():
                 author_photo = None
                 author_url = None
                 author_name = None
+
+            if author_photo:
+                r = requests.get(author_photo)
+
+                random_letters = "".join(random.choice(string.ascii_lowercase) for i in range(8))
+
+                if "jpg" in author_photo:
+                    extension = "jpg"
+                elif "png" in author_photo:
+                    extension = "png"
+                elif "gif" in author_photo:
+                    extension = "gif"
+                else:
+                    extension = "jpeg"
+
+                if r.status_code == 200:
+                    with open(ROOT_DIRECTORY + "/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
+                        f.write(r.content)
+
+            author_photo = "https://webmention.jamesg.blog/static/images/"
 
             if parsed_h_entry.get("content-plain"):
                 content = parsed_h_entry["content-plain"]

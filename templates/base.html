@@ -14,7 +14,7 @@
       <a href="#main" class="accessibility_label">Skip to main content</a>
       <nav>
         <p><a href="/">Webmention Endpoint</a></p>
-        {% if current_user.is_authenticated %}
+        {% if session.get("me") %}
         <ul>
           <li><a href="/send">Send a Webmention</a></li>
           <li><a href="/sent">Sent Webmentions</a></li>

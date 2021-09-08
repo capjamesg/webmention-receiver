@@ -1,4 +1,4 @@
-from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort
+from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, url_for, g
 import requests
 from werkzeug.security import check_password_hash
 import datetime
@@ -7,9 +7,9 @@ from bs4 import BeautifulSoup
 import sqlite3
 from .models import User
 from .config import ROOT_DIRECTORY, SITE_URL, RSS_DIRECTORY
+from functools import wraps
 from . import db
 import math
-import time
 
 main = Blueprint("main", __name__)
 
@@ -20,9 +20,17 @@ def change_to_json(database_result):
 
     return result
 
+def indieauth_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("me") == None:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @main.route("/", methods=["GET", "POST"])
 def receiver():
-    if current_user.is_authenticated and request.method == "GET":
+    if session.get("me") and request.method == "GET":
         # Show dashboard if user is authenticated
         connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -98,8 +106,36 @@ def receiver():
 
         return jsonify({"message": "Accepted."}), 202
 
+@main.route("/callback")
+def indieauth_callback():
+    code = request.args.get("code")
+
+    data = {
+        "code": code,
+        "redirect_uri": "http://localhost:5000/callback",
+        "client_id": "http://localhost:5000/"
+    }
+
+    headers = {
+        "Accept": "application/json"
+    }
+
+    r = requests.post("https://indieauth.com/auth", data=data, headers=headers)
+
+    print(r.status_code)
+
+    if r.status_code != 200:
+        flash("Your authentication failed. Please try again.")
+        return redirect("/login")
+
+    session["me"] = r.json().get("me")
+
+    print('s')
+
+    return redirect("/")
+
 @main.route("/delete", methods=["POST"])
-@login_required
+@indieauth_required
 def delete_webmention():
     if request.method == "POST":
         target = request.form.get("target")
@@ -122,7 +158,6 @@ def delete_webmention():
         return abort(405)
 
 @main.route("/logout")
-@login_required
 def logout():
     logout_user()
     return redirect("/home")
@@ -146,13 +181,13 @@ def login():
 
         return redirect("/home")
     else:
-        if current_user.is_authenticated:
+        if session.get("me"):
             return redirect("/home")
 
         return render_template("auth.html", title="Webmention Dashboard Login")
 
 @main.route("/sent")
-@login_required
+@indieauth_required
 def view_sent_webmentions_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -193,7 +228,7 @@ def view_sent_webmentions_page():
     return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
 
 @main.route("/sent/<wm>")
-@login_required
+@indieauth_required
 def view_sent_webmention(wm):
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -215,7 +250,7 @@ def view_sent_webmention(wm):
             return abort(404)
 
 @main.route("/send", methods=["GET", "POST"])
-@login_required
+@indieauth_required
 def send_webmention():
     if request.method == "POST":
         source = request.form.get("source")
@@ -437,7 +472,7 @@ def retrieve_sent_webmentions_json():
         
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-        if (get_key and len(get_key) == 0) and current_user.is_authenticated == False:
+        if (get_key and len(get_key) == 0) and not session.get("me"):
             return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 403
 
         if status == "valid":
@@ -487,7 +522,7 @@ def retrieve_webmentions():
     else:
         get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date ASC;".format(where_clause), attributes, )
     
-    if not get_key and current_user.is_authenticated == False and where_clause == "":
+    if not get_key and session.get("me") and where_clause == "":
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
     result = change_to_json(get_webmentions)
@@ -508,7 +543,11 @@ def rss():
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
     
-    if (get_key and len(get_key) == 0) and current_user.is_authenticated == False:
+    if (get_key and len(get_key) == 0) and not session.get("me"):
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
     
     return send_from_directory(RSS_DIRECTORY + "/static/", "webmentions.xml")
+
+@main.route("/static/images/<path:filename>")
+def send_image(filename):
+    return send_from_directory(ROOT_DIRECTORY + "/static/images/", filename)
