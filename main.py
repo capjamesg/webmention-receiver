@@ -112,8 +112,8 @@ def indieauth_callback():
 
     data = {
         "code": code,
-        "redirect_uri": "http://localhost:5000/callback",
-        "client_id": "http://localhost:5000/"
+        "redirect_uri": "https://webmention.jamesg.blog/callback",
+        "client_id": "https://webmention.jamesg.blog/"
     }
 
     headers = {
@@ -126,6 +126,10 @@ def indieauth_callback():
 
     if r.status_code != 200:
         flash("Your authentication failed. Please try again.")
+        return redirect("/login")
+
+    if r.json().get("me") != "me":
+        flash("Your domain is not allowed to access this website.")
         return redirect("/login")
 
     session["me"] = r.json().get("me")
