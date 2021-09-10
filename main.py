@@ -1,15 +1,13 @@
-from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, url_for, g
+from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session
 import requests
 from werkzeug.security import check_password_hash
 import datetime
-from flask_login import login_required, current_user, login_user, logout_user
 from bs4 import BeautifulSoup
 import sqlite3
-from .models import User
 from .config import ROOT_DIRECTORY, SITE_URL, RSS_DIRECTORY
-from functools import wraps
-from . import db
+from indieauth import requires_indieauth
 import math
+import os
 
 main = Blueprint("main", __name__)
 
@@ -20,15 +18,8 @@ def change_to_json(database_result):
 
     return result
 
-def indieauth_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if session.get("me") == None:
-            return redirect(url_for('login', next=request.url))
-        return f(*args, **kwargs)
-    return decorated_function
-
 @main.route("/", methods=["GET", "POST"])
+@requires_indieauth
 def receiver():
     if session.get("me") and request.method == "GET":
         # Show dashboard if user is authenticated
@@ -112,8 +103,8 @@ def indieauth_callback():
 
     data = {
         "code": code,
-        "redirect_uri": "http://localhost:5000/callback",
-        "client_id": "http://localhost:5000/"
+        "redirect_uri": "https://webmention.jamesg.blog/callback",
+        "client_id": "https://webmention.jamesg.blog/"
     }
 
     headers = {
@@ -137,7 +128,7 @@ def indieauth_callback():
     return redirect("/")
 
 @main.route("/delete", methods=["POST"])
-@indieauth_required
+@requires_indieauth
 def delete_webmention():
     if request.method == "POST":
         target = request.form.get("target")
@@ -160,36 +151,19 @@ def delete_webmention():
         return abort(405)
 
 @main.route("/logout")
+@requires_indieauth
 def logout():
-    logout_user()
+    session.pop("me")
+    session.pop("access_token")
+
     return redirect("/home")
 
 @main.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        user = User.query.filter_by(username=username).first()
-
-        # check if the user actually exists
-        # take the user-supplied password, hash it, and compare it to the hashed password in the database
-        if not user or not check_password_hash(user.password, password):
-            flash("Please check your login details and try again.")
-            return redirect("/login") # if the user doesn"t exist or password is wrong, reload the page
-
-        # if the above check passes, then we know the user has the right credentials
-        login_user(user, remember=True)
-
-        return redirect("/home")
-    else:
-        if session.get("me"):
-            return redirect("/home")
-
-        return render_template("auth.html", title="Webmention Dashboard Login")
+    return render_template("auth.html", title="Webmention Dashboard Login")
 
 @main.route("/sent")
-@indieauth_required
+@requires_indieauth
 def view_sent_webmentions_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -230,7 +204,7 @@ def view_sent_webmentions_page():
     return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
 
 @main.route("/sent/<wm>")
-@indieauth_required
+@requires_indieauth
 def view_sent_webmention(wm):
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -252,7 +226,7 @@ def view_sent_webmention(wm):
             return abort(404)
 
 @main.route("/send", methods=["GET", "POST"])
-@indieauth_required
+@requires_indieauth
 def send_webmention():
     if request.method == "POST":
         source = request.form.get("source")
@@ -348,9 +322,6 @@ def send_webmention_anyone():
     if request.method == "POST":
         source = request.form.get("source")
         target = request.form.get("target")
-
-        print(source)
-        print(target)
 
         if not source and not target:
             message = {
@@ -551,5 +522,5 @@ def rss():
     return send_from_directory(RSS_DIRECTORY + "/static/", "webmentions.xml")
 
 @main.route("/static/images/<path:filename>")
-def send_image(filename):
+def send_images(filename):
     return send_from_directory(ROOT_DIRECTORY + "/webmention_receiver/static/images/", filename)

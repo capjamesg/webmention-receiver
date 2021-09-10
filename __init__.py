@@ -4,6 +4,7 @@ from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import dateutil.parser
+import os
 
 # init SQLAlchemy so we can use it later in our models
 db = SQLAlchemy()
@@ -17,11 +18,14 @@ def create_app():
         default_limits=["200 per day", "50 per hour"]
     )
 
-    app.config['SECRET_KEY'] = 'capjamesgsecretkey555'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///webmentions.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
+
+    app.secret_key = os.urandom(24)
+    app.config["TOKEN_ENDPOINT"] = "https://tokens.indieauth.com/token"
+    app.config["ME"] = "https://jamesg.blog"
 
     from .models import User
 
@@ -51,7 +55,7 @@ def create_app():
 
     @app.errorhandler(405)
     def method_not_allowed(e):
-        return render_template("404.html", title="Method not allowed", error=405), 404
+        return render_template("404.html", title="Method not allowed", error=405), 405
 
     return app
 
