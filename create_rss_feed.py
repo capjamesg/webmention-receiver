@@ -19,20 +19,18 @@ def generate_feed():
     with connection:
         cursor = connection.cursor()
         # Create RSS feed for all webmentions
-        webmentions = cursor.execute("SELECT source, target, received_date, contents FROM webmentions ORDER BY received_date ASC LIMIT 10;").fetchall()
+        # Exclude Bridgy webmentions as I may receive a lot of them
+        webmentions = cursor.execute("SELECT source, target, received_date, contents FROM webmentions WHERE source NOT LIKE 'https://brid.gy/%' AND status = 'valid' ORDER BY received_date ASC LIMIT 10;").fetchall()
         for webmention in webmentions:
-
-            # Exclude Bridgy webmentions as I may receive a lot of them
-            if not webmention[0].startswith("https://brid.gy/"):
-                fe = fg.add_entry()
-                fe.id(webmention[0])
-                fe.title(webmention[0])
-                fe.link(href=webmention[3], rel='alternate')
-                fe.link(href=webmention[2], rel='self')
-                if webmention[3]:
-                    fe.description(webmention[3])
-                else:
-                    fe.description("Webmention sent from {} to {} on {}.".format(webmention[0], webmention[1], webmention[2]))
+            fe = fg.add_entry()
+            fe.id(webmention[0])
+            fe.title(webmention[0])
+            fe.link(href=webmention[3], rel='alternate')
+            fe.link(href=webmention[2], rel='self')
+            if webmention[3]:
+                fe.description(webmention[3])
+            else:
+                fe.description("Webmention sent from {} to {} on {}.".format(webmention[0], webmention[1], webmention[2]))
 
     fg.rss_file("static/webmentions.xml")
 
