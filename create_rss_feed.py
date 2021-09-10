@@ -14,7 +14,7 @@ def generate_feed():
     fg.description("Webmentions sent to webmention.jamesg.blog")
     fg.language("en")
 
-    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+    connection = sqlite3.connect("webmentions.db")
 
     with connection:
         cursor = connection.cursor()
@@ -23,7 +23,7 @@ def generate_feed():
         for webmention in webmentions:
 
             # Exclude Bridgy webmentions as I may receive a lot of them
-            if "brid.gy" not in webmention[0]:
+            if not webmention[0].startswith("https://brid.gy/"):
                 fe = fg.add_entry()
                 fe.id(webmention[0])
                 fe.title(webmention[0])

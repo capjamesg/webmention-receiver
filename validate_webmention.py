@@ -89,7 +89,8 @@ def validate_webmentions():
                 contains_valid_link_to_target = True
 
             # Might want to comment out this if statement for testing
-            if contains_valid_link_to_target == False and not source.startswith("https://brid.gy/like/instagram"):
+            #  and not source.startswith("https://brid.gy/like/instagram") (not used anymore)
+            if contains_valid_link_to_target == False:
                 contents = "Document must contain source URL."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
