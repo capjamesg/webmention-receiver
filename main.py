@@ -112,29 +112,27 @@ def indieauth_callback():
 
     data = {
         "code": code,
-        "redirect_uri": "https://webmention.jamesg.blog/callback",
-        "client_id": "https://webmention.jamesg.blog/"
+        "redirect_uri": "http://localhost:5000/callback",
+        "client_id": "http://localhost:5000/"
     }
 
     headers = {
         "Accept": "application/json"
     }
 
-    r = requests.post("https://indieauth.com/auth", data=data, headers=headers)
-
-    print(r.status_code)
+    r = requests.post("https://tokens.indieauth.com/token", data=data, headers=headers)
 
     if r.status_code != 200:
         flash("Your authentication failed. Please try again.")
         return redirect("/login")
 
-    if r.json().get("me") != "me":
+    if r.json().get("me") != "https://jamesg.blog/":
         flash("Your domain is not allowed to access this website.")
         return redirect("/login")
 
     session["me"] = r.json().get("me")
-
-    print('s')
+    session["access_token"] = r.json().get("access_token")
+    session["scope"] = r.json().get("scope")
 
     return redirect("/")
 
@@ -554,4 +552,4 @@ def rss():
 
 @main.route("/static/images/<path:filename>")
 def send_image(filename):
-    return send_from_directory(ROOT_DIRECTORY + "/static/images/", filename)
+    return send_from_directory(ROOT_DIRECTORY + "/webmention_receiver/static/images/", filename)
