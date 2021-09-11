@@ -6,6 +6,10 @@ If you have not heard of webmentions, I would encourage you to check out the [In
 
 To use this project, you will need to replace all mentions of "jamesg.blog" with your own domain name in the codebase.
 
+## Screenshot
+
+![Microsub channel list](screenshot.png)
+
 ## Endpoints
 
 Here are the endpoints supported by this project:

@@ -154,6 +154,8 @@ def validate_webmentions():
             else:
                 content_html = None
 
+            parsed_h_entry["content"] = parsed_h_entry["content"].replace("<a ", "<a rel='nofollow'>")
+
             cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", source, target, ))
             
             connection.commit()
