@@ -4,19 +4,20 @@
       <h1>Webmention Dashboard</h1>
       <p>Sign in is powered by IndieAuth which means you can log in to the webmention dashboard with your domain name.</p>
       <p>Enter your domain name below to log in to the dashboard.</p>
+      <p>Only approved domain names can log in to the dashboard.</p>
       {% with messages = get_flashed_messages() %}
       {% if messages %}
           <p class="error">
-              <em>{{ message[0] }}</em>
+              <em>{{ messages[0] }}</em>
           </p>
       {% endif %}
       {% endwith %}
       <form action="https://indieauth.com/auth" method="GET">
         <label for="indie_auth_url">Web Address:</label><br>
-        <input id="indie_auth_url" type="text" name="me" placeholder="yourdomain.com" /><br>
+        <input id="indie_auth_url" type="url" name="me" placeholder="https://yourdomain.com" /><br>
         <input type="submit" value="Sign In" />
-        <input type="hidden" name="client_id" value="https://webmention.jamesg.blog/" />
-        <input type="hidden" name="redirect_uri" value="https://webmention.jamesg.blog/callback" />
+        <input type="hidden" name="client_id" value="{{ config.CLIENT_ID }}" />
+        <input type="hidden" name="redirect_uri" value="{{ config.CALLBACK_URL }}" />
       </form>
   </section>
 {% endblock %}

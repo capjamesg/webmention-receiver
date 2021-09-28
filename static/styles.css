@@ -271,6 +271,9 @@ h1 {
 	display: inline-block;
 	margin-bottom: 5px;
 }
+.pages {
+	margin-right: 5px;
+}
 input {
   padding: 10px;
   border-radius: 10px;

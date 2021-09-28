@@ -5,6 +5,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import dateutil.parser
 import os
+from . import config
 
 # init SQLAlchemy so we can use it later in our models
 db = SQLAlchemy()
@@ -12,20 +13,17 @@ db = SQLAlchemy()
 def create_app():
     app = Flask(__name__)
 
+    app.config.from_object('config')
+
     Limiter(
         app,
         key_func=get_remote_address,
         default_limits=["200 per day", "50 per hour"]
     )
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///webmentions.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
     db.init_app(app)
 
     app.secret_key = os.urandom(24)
-    app.config["TOKEN_ENDPOINT"] = "https://tokens.indieauth.com/token"
-    app.config["ME"] = "https://jamesg.blog"
 
     from .models import User
 

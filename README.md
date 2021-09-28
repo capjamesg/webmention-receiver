@@ -73,9 +73,19 @@ Then you should install the dependencies necessary to run this project:
 
     pip install -r requirements.txt
 
+### Configuration variables
+
 You will then need to create a .env file. This file should contain an API key that you keep to yourself:
 
     api-key=THIS_IS_YOUR_KEY
+
+Please also read the config.py file and populate it with the correct values.
+
+You will need to specify the callback URL for your webmention endpoint, your client ID, your token endpoint, your domain name, and the directory in which your RSS feed should be placed.
+
+Examples are provided in the config.py file.
+
+### Setting up the database
 
 A database is required to run this project. Create a database file called webmentions.db and use sqlite3 to enter it:
 
@@ -121,3 +131,11 @@ api-key should be equal to the value of api-key that you set in your .env file.
 ## License
 
 This project is licenced under the MIT License.
+
+## Contributing
+
+If you have ideas on how to make this webmention endpoint better, feel free to create an Issue for discussion on the GitHub Issues page.
+
+## Contributors
+
+- capjamesg
