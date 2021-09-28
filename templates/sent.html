@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .feed li {
+        background: white;
+        border-radius: 15px;
+        border: 1px solid lightgrey;
+        margin-bottom: 10px;
+        padding: 10px;
+    }
+</style>
+<section class="feed">
+    <h1>Your sent webmentions</h1>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class="error">
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+    {% endwith %}
+    <p>You have sent {{ count }} webmention{% if count != 1 %}s{% endif %}.</p>
+  </section>
+  <section class="feed">
+    {% if webmentions | length == 0 %}
+    <p>You have not sent any webmentions yet.</p>
+    {% else %}
+    {% if sort == "oldest" %}
+      <p>Below are the webmentions you have sent, sorted in order of the webmentions sent longest ago.</p>
+      <p><a href="/sent">Sort webmentions in order of the newest first.</a></p>
+      <hr>
+    {% else %}
+      <p>Below are the webmentions you have sent, sorted in order of the webmentions sent most recently.</p>
+      <p><a href="/sent?sort=oldest">Sort webmentions in order of the oldest first.</a></p>
+    {% endif %}
+      <ul>
+      {% for w in webmentions %}
+        <li>
+          <h3>Webmention to {{ w[2].split("//")[1] }}</h3>
+          <p>Target: <a href="{{ w[2] }}">{{ w[2] }}</a></p>
+          <p>Source: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
+          <p>Sent: {{ w[3] | convert_time }}</p>
+          <p>Status: {{ w[4] }}</p>
+          <p><a href="/sent/{{ w[0] }}">See webmention.</a></p>
+        </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  {% include "pagination.html" %}
+{% endblock %}

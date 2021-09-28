@@ -8,7 +8,6 @@ def generate_feed():
     fg.id("https://webmention.jamesg.blog")
     fg.title("James' Webmention Receiver Feed")
     fg.author(name="James' Webmention Receiver")
-    fg.link(href="https://webmention.jamesg.blog", rel="alternate")
     fg.logo("https://webmention.jamesg.blog/static/favicon.ico")
     fg.subtitle("James' Webmention Receiver Feed")
     fg.description("Webmentions sent to webmention.jamesg.blog")
@@ -34,12 +33,22 @@ def generate_feed():
 
             fe = fg.add_entry()
             fe.id(webmention[0])
-            fe.title(webmention[0])
+
+            if post_type and webmention[5] and webmention[1]:
+                fe.title("{} from {} to {}".format(post_type, webmention[5], webmention[1]))
+            else:
+                fe.title(webmention[0])
+
             try:
-                fe.pubDate(webmention[2] + "+00:00")
+                date = parse(webmention[2])
+
+                timestamp = date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                fe.pubDate(timestamp)
             except:
                 continue
+
             fe.link(href=webmention[0])
+
             if webmention[3]:
                 fe.description(webmention[3])
             else:

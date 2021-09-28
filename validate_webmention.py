@@ -139,10 +139,10 @@ def validate_webmentions():
                     extension = "jpeg"
 
                 if r.status_code == 200:
-                    with open(ROOT_DIRECTORY + "/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
+                    with open("/home/capjamesg/webmention_receiver/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
                         f.write(r.content)
 
-            author_photo = "https://webmention.jamesg.blog/static/images/"
+                author_photo = "https://webmention.jamesg.blog/static/images/" + random_letters + "." + extension
 
             if parsed_h_entry.get("content-plain"):
                 content = parsed_h_entry["content-plain"]
@@ -151,10 +151,10 @@ def validate_webmentions():
             
             if parsed_h_entry.get("content"):
                 content_html = parsed_h_entry["content"]
+
+                parsed_h_entry["content"] = parsed_h_entry["content"].replace("<a ", "<a rel='nofollow'>")
             else:
                 content_html = None
-
-            parsed_h_entry["content"] = parsed_h_entry["content"].replace("<a ", "<a rel='nofollow'>")
 
             cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", source, target, ))
             

@@ -11,6 +11,7 @@
 </style>
 <section class="feed">
     <h1>Hello, {{ session.get("me").replace("https://", "").replace("http://", "").strip("/") }}!</h1>
+    <p>You have received {{ received_count }} webmention{% if received_count != 1 %}s{% endif %}.</p>
     <ul>
       {% for w in webmentions %}
         <li>
@@ -40,5 +41,6 @@
         </li>
       {% endfor %}
     </ul>
+    {% include "pagination.html" %}
 </section>
 {% endblock %}

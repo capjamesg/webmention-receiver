@@ -1,13 +1,11 @@
-from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session
+from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
 import requests
-from werkzeug.security import check_password_hash
 import datetime
 from bs4 import BeautifulSoup
 import sqlite3
-from .config import ROOT_DIRECTORY, SITE_URL, RSS_DIRECTORY
-from indieauth import requires_indieauth
+from .config import ROOT_DIRECTORY, RSS_DIRECTORY
+from .indieauth import requires_indieauth
 import math
-import os
 
 main = Blueprint("main", __name__)
 
@@ -52,7 +50,7 @@ def receiver():
     # If user GETs / and is not authenticated, code below runs
 
     if request.method == "GET":
-        return jsonify({"message": "This is the James' Coffee Blog Webmention receiver."})
+        return jsonify({"message": "This is the the {} webmention receiver.".format(current_app.config["ME"])})
 
     # Process as www-form-encoded as per spec
     if request.content_type != "application/x-www-form-urlencoded":
@@ -74,7 +72,10 @@ def receiver():
         return jsonify({"message": "Source cannot be equal to target."}), 400
 
     # valid_targets must be a tuple to be compatible with startswith
-    valid_targets = ("https://{}".format(SITE_URL), "http://{}".format(SITE_URL), "https://www.{}".format(SITE_URL), "http://www.{}".format(SITE_URL))
+
+    raw_domain = current_app.config["ME"].replace("http://", "").replace("https://", "")
+
+    valid_targets = ("https://{}".format(raw_domain), "http://{}".format(raw_domain))
     if not target.startswith(valid_targets):
         return jsonify({"message": "Target must be a {} resource.".format(SITE_URL)}), 400
 
@@ -103,8 +104,8 @@ def indieauth_callback():
 
     data = {
         "code": code,
-        "redirect_uri": "https://webmention.jamesg.blog/callback",
-        "client_id": "https://webmention.jamesg.blog/"
+        "redirect_uri": current_app.config["CALLBACK_URL"],
+        "client_id": current_app.config["CALLBACK_URL"]
     }
 
     headers = {
@@ -113,17 +114,18 @@ def indieauth_callback():
 
     r = requests.post("https://tokens.indieauth.com/token", data=data, headers=headers)
 
+    print(r.json())
+
     if r.status_code != 200:
         flash("Your authentication failed. Please try again.")
         return redirect("/login")
 
-    if r.json().get("me") != "https://jamesg.blog/":
+    if r.json().get("me") != current_app.config["ME"]:
         flash("Your domain is not allowed to access this website.")
         return redirect("/login")
 
     session["me"] = r.json().get("me")
     session["access_token"] = r.json().get("access_token")
-    session["scope"] = r.json().get("scope")
 
     return redirect("/")
 
@@ -163,7 +165,7 @@ def login():
     return render_template("auth.html", title="Webmention Dashboard Login")
 
 @main.route("/sent")
-@requires_indieauth
+# @requires_indieauth
 def view_sent_webmentions_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -201,7 +203,7 @@ def view_sent_webmentions_page():
         
         webmentions = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint, location_header FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
 
-    return render_template("home.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
+    return render_template("sent.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
 
 @main.route("/sent/<wm>")
 @requires_indieauth
@@ -316,7 +318,6 @@ def send_webmention():
 
     return render_template("send_webmention.html", title="Send a Webmention")
 
-
 @main.route("/send/open", methods=["POST"])
 def send_webmention_anyone():
     if request.method == "POST":
@@ -343,11 +344,12 @@ def send_webmention_anyone():
             return render_template("send_open.html", message=message)
 
 
-        # if domain is not jamesg.blog
-        if not target.startswith("https://jamesg.blog") or target.startswith("http://jamesg.blog"):
+        # if domain is not approved, don't allow access
+        raw_domain = current_app.config["ME"].replace("http://", "").replace("https://", "")
+        if not target.startswith("http://" + raw_domain) or target.startswith("http://" + raw_domain):
             message = {
-                "title": "Error: Target must be a jamesg.blog post.",
-                "description": "Target must be a jamesg.blog post.",
+                "title": "Error: Target must be a {} post.".format(current_app.config["ME"]),
+                "description": "Target must be a {} post.".format(current_app.config["ME"]),
                 "url": target
             }
 
