@@ -77,7 +77,7 @@ def receiver():
 
     valid_targets = ("https://{}".format(raw_domain), "http://{}".format(raw_domain))
     if not target.startswith(valid_targets):
-        return jsonify({"message": "Target must be a {} resource.".format(SITE_URL)}), 400
+        return jsonify({"message": "Target must be a {} resource.".format(raw_domain)}), 400
 
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -310,8 +310,7 @@ def send_webmention():
                 id = cursor.lastrowid
                 cursor.execute("UPDATE sent_webmentions SET response = ? WHERE id = ?", (message, id, ))
 
-            flash("success")
-            return redirect("/sent/{}".format(id)), 201
+            return redirect("/sent/{}".format(id))
         except:
             flash("There was an error processing your webmention.")
             return render_template("send_webmention.html", title="Send a Webmention")
