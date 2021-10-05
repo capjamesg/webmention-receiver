@@ -33,10 +33,14 @@
       </div>
       <footer>
         <ul>
-          <li><a href="/setup">Setup Instructions</a></li>
-          <li><a href="/received">Received (JSON)</a></li>
-          <li><a href="/sent/json">Sent (JSON)</a></li>
-          <li><a href="/rss">RSS Feed</a></li>
+          {% if config.SHOW_SETUP == True %}
+            <li><a href="/setup">Setup Instructions</a></li>
+          {% endif %}
+          {% if session.get("me") %}
+            <li><a href="/received">Received (JSON)</a></li>
+            <li><a href="/sent/json">Sent (JSON)</a></li>
+            <li><a href="/rss">RSS Feed</a></li>
+          {% endif %}
         </ul>
       </footer>
       <p class="accessibility_label"><a href="#main">Go Back to the Top</a></p>
