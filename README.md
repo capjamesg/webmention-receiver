@@ -111,7 +111,7 @@ Use these commands to create the tables necessary to run this project:
         target,
         sent_date,
         status_code,
-        response
+        response,
         webmention_endpoint,
         location_header
     );

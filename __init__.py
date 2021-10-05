@@ -5,7 +5,6 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import dateutil.parser
 import os
-from . import config
 
 # init SQLAlchemy so we can use it later in our models
 db = SQLAlchemy()
@@ -13,7 +12,8 @@ db = SQLAlchemy()
 def create_app():
     app = Flask(__name__)
 
-    app.config.from_object('config')
+    # read config.py file
+    app.config.from_pyfile(os.path.join(".", "config.py"), silent=False)
 
     Limiter(
         app,

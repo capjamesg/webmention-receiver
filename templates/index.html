@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .feed li {
+        background: white;
+        border-radius: 15px;
+        border: 1px solid lightgrey;
+        margin-bottom: 10px;
+        padding: 10px;
+    }
+</style>
+<section class="feed">
+    <h1>Welcome to the Webmention Endpoint!</h1>
+    <p>This webmention endpoint is run by {{ config.ME }}.</p>
+    <p>If you are the owner of this site, you can log in and view your webmentions.</p>
+    <h2>What are webmentions?</h2>
+    <p>The webmention specification provides a way in which websites can send interactions to each other such as likes, replies, and bookmarks.</p>
+    <p>Many sites owned by IndieWeb community members (including this one!) support receiving webmentions.</p>
+    <p>By using webmentions, site owners can send comments to each other and retain control over their comment. This is not possible on traditional social media platforms where the platform usually owns all comments and content you produce.</p>
+    <h2>How can I learn more about webmentions?</h2>
+    <p>If you want to get started with webmentions, check out the IndieWeb Webmention wiki page. That page contains guidance on the basics of webmentions, how they are used, and how you can start adding webmentions to your own site.</p>
+    <h2>Can I host my own webmention endpoint?</h2>
+    <p>Yes! You can host your own webmention endpoint on your own server. You can deploy a version of this webmention endpoint by going to <a href="https://github.com/capjamesg/webmention-receiver">the project GitHub page</a> and following the instructions.
+</section>
+{% endblock %}

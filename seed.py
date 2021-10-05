@@ -25,7 +25,7 @@ def create_tables(username):
     with connection:
         cursor = connection.cursor()
 
-        cursor.execute("CREATE TABLE user IF NOT EXISTS (id integer primary key autoincrement, username, password, api_key);")
+        cursor.execute("CREATE TABLE user IF NOT EXISTS (id integer primary key autoincrement, api_key, publish_approved, registered_date);")
 
         cursor.execute("CREATE TABLE webmentions IF NOT EXISTS (id integer primary key autoincrement, source, target, property, contents, author_name, author_phopto, author_url, content_html, received_date, status);")
 
