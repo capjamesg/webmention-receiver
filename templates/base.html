@@ -18,9 +18,7 @@
         <ul>
           <li><a href="/send">Send a Webmention</a></li>
           <li><a href="/sent">Sent Webmentions</a></li>
-          <li><a href="/received">Received (JSON)</a></li>
-          <li><a href="/sent/json">Sent (JSON)</a></li>
-          <li><a href="/rss">RSS Feed</a></li>
+          <li><a href="/stats">Statistics</a></li>
           <li><a href="/logout">Logout</a></li>
         </ul>
         {% else %}
@@ -33,6 +31,14 @@
         {% block content %}
         {% endblock %}
       </div>
+      <footer>
+        <ul>
+          <li><a href="/setup">Setup Instructions</a></li>
+          <li><a href="/received">Received (JSON)</a></li>
+          <li><a href="/sent/json">Sent (JSON)</a></li>
+          <li><a href="/rss">RSS Feed</a></li>
+        </ul>
+      </footer>
       <p class="accessibility_label"><a href="#main">Go Back to the Top</a></p>
     </main>
   </body>
