@@ -9,5 +9,10 @@
 <p>Source: <a href="{{ webmention[1] }}">{{ webmention[1] }}</a></p>
 <p>Sent: {{ webmention[3] | convert_time }}</p>
 <p>Status: {{ webmention[4] }}</p>
-<p>Message: <code><pre>{{ webmention[5] }}</pre></code></p>
+<p>Message:</p>
+<ul>
+    {% for item in webmention[5] %}
+        <li>{{ item }}: webmention[5][item]</li>
+    {% endfor %}
+</ul>
 {% endblock %}

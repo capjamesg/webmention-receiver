@@ -6,6 +6,7 @@ import sqlite3
 from .config import ROOT_DIRECTORY, RSS_DIRECTORY
 from .indieauth import requires_indieauth
 import math
+import json
 
 main = Blueprint("main", __name__)
 
@@ -50,7 +51,7 @@ def receiver():
     # If user GETs / and is not authenticated, code below runs
 
     if request.method == "GET":
-        return jsonify({"message": "This is the the {} webmention receiver.".format(current_app.config["ME"])})
+        return render_template("index.html", title="{} Webmention Receiver Home".format(current_app.config["ME"].strip().replace("https://", "").replace("http://", "")))
 
     # Process as www-form-encoded as per spec
     if request.content_type != "application/x-www-form-urlencoded":
@@ -113,9 +114,7 @@ def indieauth_callback():
     }
 
     r = requests.post("https://tokens.indieauth.com/token", data=data, headers=headers)
-
-    print(r.json())
-
+    
     if r.status_code != 200:
         flash("Your authentication failed. Please try again.")
         return redirect("/login")
@@ -165,7 +164,7 @@ def login():
     return render_template("auth.html", title="Webmention Dashboard Login")
 
 @main.route("/sent")
-# @requires_indieauth
+@requires_indieauth
 def view_sent_webmentions_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -192,9 +191,7 @@ def view_sent_webmentions_page():
         to_process = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint, location_header FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
 
         for c in to_process:
-            print(c[7])
             if c[7] and c[7] != "" and c[7] != None:
-                print('d')
                 r = requests.get(c[7])
                 cursor.execute("UPDATE sent_webmentions SET response = ?, location_header = ? WHERE source = ? AND target = ?", (str(r.json()), "", c[1], c[2], ))
 
@@ -214,6 +211,9 @@ def view_sent_webmention(wm):
         cursor = connection.cursor()
         webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
 
+        if not webmention:
+            abort(404)
+
         if webmention[7] and webmention[7] != "":
             r = requests.get(webmention[7])
 
@@ -221,9 +221,14 @@ def view_sent_webmention(wm):
                 cursor.execute("UPDATE sent_webmentions SET response = ? AND location_header = ? WHERE source = ? AND target = ?", (r.text, "", webmention[1], webmention[2], ))
 
         webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
+
+        parsed_response = str(webmention[5].replace("'", "\""))
+
+        final_parsed_response = json.loads(parsed_response)
         
         if webmention:
-            return render_template("webmention.html", webmention=webmention, title="Webmention to {} Details".format(webmention[1]))
+            return render_template("webmention.html", webmention=webmention, title="Webmention to {} Details".format(webmention[1]), \
+                response=json.loads(final_parsed_response))
         else:
             return abort(404)
 
@@ -506,6 +511,21 @@ def retrieve_webmentions():
     response.headers['Access-Control-Allow-Origin'] = '*'
 
     return response, 200
+
+@main.route("/stats")
+@requires_indieauth
+def stats_page():
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+    with connection:
+        cursor = connection.cursor()
+
+        get_webmentions = cursor.execute("SELECT count(*) FROM webmentions;").fetchone()[0]
+
+        get_sent_webmentions = cursor.execute("SELECT count(*) FROM sent_webmentions;").fetchone()[0]
+
+        received_types = cursor.execute("SELECT property, count(*) FROM webmentions GROUP BY property;").fetchall()
+
+        return render_template("stats.html", received_count=get_webmentions, sent_count=get_sent_webmentions, received_types=received_types)
 
 @main.route("/rss")
 def rss():
