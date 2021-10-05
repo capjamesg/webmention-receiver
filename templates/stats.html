@@ -22,6 +22,10 @@
         {% set post_type = "🤖 Mention" %}
         {% elif type == "bookmark-of" %}
         {% set post_type = "🔖 Bookmark" %}
+        {% elif post_type == "rsvp" %}
+        {% set post_type = "🎉 RSVP" %}
+        {% elif type == "repost-of" %}
+        {% set post_type = "🔁 Repost" %}
         {% else %}
         {% set post_type = "💬 Reply" %}
         {% endif %}

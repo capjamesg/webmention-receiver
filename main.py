@@ -106,7 +106,7 @@ def indieauth_callback():
     data = {
         "code": code,
         "redirect_uri": current_app.config["CALLBACK_URL"],
-        "client_id": current_app.config["CALLBACK_URL"]
+        "client_id": current_app.config["CLIENT_ID"]
     }
 
     headers = {
@@ -119,7 +119,7 @@ def indieauth_callback():
         flash("Your authentication failed. Please try again.")
         return redirect("/login")
 
-    if r.json().get("me") != current_app.config["ME"]:
+    if r.json().get("me").strip("/") != current_app.config["ME"].strip("/"):
         flash("Your domain is not allowed to access this website.")
         return redirect("/login")
 
