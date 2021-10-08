@@ -13,6 +13,7 @@
     <h1>Hello, {{ session.get("me").replace("https://", "").replace("http://", "").strip("/") }}!</h1>
     <p>You have received {{ received_count }} webmention{% if received_count != 1 %}s{% endif %}.</p>
     <p>You have sent {{ sent_count }} webmention{% if sent_count != 1 %}s{% endif %}.</p>
+    <p>{{ pending_webmention_count }} incoming webmention{% if pending_webmention_count != 1 %}s{% endif %} are queued to be processed.</p>
     <p>Here is a breakdown of all of your received webmentions by webmention type:</p>
     <ul>
         {% for type, count in received_types %}
@@ -26,10 +27,12 @@
         {% set post_type = "🎉 RSVP" %}
         {% elif type == "repost-of" %}
         {% set post_type = "🔁 Repost" %}
-        {% else %}
+        {% elif type == "reply" %}
         {% set post_type = "💬 Reply" %}
+        {% else %}
+        {% set post_type = "❓ Unknown" %}
         {% endif %}
-        <li>{{ post_type }}s: {{ count }}</li>
+        <li>{{ post_type }}: {{ count }}</li>
         {% endfor %}
     </ul>
 </section>

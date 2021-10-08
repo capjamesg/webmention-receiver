@@ -17,42 +17,49 @@ def change_to_json(database_result):
 
     return result
 
-@main.route("/", methods=["GET", "POST"])
+@main.route("/")
+def index():
+    # redirect logged in users to the dashboard
+    if session.get("me"):
+        return redirect("/home")
+
+    return render_template("index.html", title="{} Webmention Receiver Home".format(current_app.config["ME"].strip().replace("https://", "").replace("http://", "")))
+
+@main.route("/home")
+def homepage():
+    # Only show dashboard if user is authenticated
+    if not session.get("me"):
+        return redirect("/login")
+
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+    page = request.args.get("page")
+
+    if page and int(page) > 1:
+        offset = (int(page) - 1) * 10
+        page = int(page)
+    else:
+        offset = 0
+        page = 1
+
+    sort_param = request.args.get("sort")
+
+    if sort_param == "oldest":
+        sort_order = "ASC"
+    else:
+        sort_order = "DESC"
+
+    cursor = connection.cursor()
+
+    with connection:
+        count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
+        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,) ).fetchall()
+
+    return render_template("feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
+
+@main.route("/endpoint", methods=["POST"])
 @requires_indieauth
 def receiver():
-    if session.get("me") and request.method == "GET":
-        # Show dashboard if user is authenticated
-        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
-
-        page = request.args.get("page")
-
-        if page and int(page) > 1:
-            offset = (int(page) - 1) * 10
-            page = int(page)
-        else:
-            offset = 0
-            page = 1
-
-        sort_param = request.args.get("sort")
-
-        if sort_param == "oldest":
-            sort_order = "ASC"
-        else:
-            sort_order = "DESC"
-
-        cursor = connection.cursor()
-
-        with connection:
-            count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-            webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,) ).fetchall()
-
-        return render_template("feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
-
-    # If user GETs / and is not authenticated, code below runs
-
-    if request.method == "GET":
-        return render_template("index.html", title="{} Webmention Receiver Home".format(current_app.config["ME"].strip().replace("https://", "").replace("http://", "")))
-
     # Process as www-form-encoded as per spec
     if request.content_type != "application/x-www-form-urlencoded":
         return jsonify({"message": "Content type must be x-www-url-formencoded."}), 400
@@ -152,7 +159,12 @@ def view_sent_webmentions_page():
         for c in to_process:
             if c[7] and c[7] != "" and c[7] != None:
                 r = requests.get(c[7])
-                cursor.execute("UPDATE sent_webmentions SET response = ?, location_header = ? WHERE source = ? AND target = ?", (str(r.json()), "", c[1], c[2], ))
+                if r.status_code == 200:
+                    text = r.text
+                else:
+                    text = "Error: {}, {}".format(r.status_code, r.text)
+
+                cursor.execute("UPDATE sent_webmentions SET response = ?, location_header = ? WHERE source = ? AND target = ?", (text, "", c[1], c[2], ))
 
     with connection:
         cursor = connection.cursor()
@@ -275,9 +287,11 @@ def stats_page():
 
         get_sent_webmentions = cursor.execute("SELECT count(*) FROM sent_webmentions;").fetchone()[0]
 
-        received_types = cursor.execute("SELECT property, count(*) FROM webmentions GROUP BY property;").fetchall()
+        received_types = cursor.execute("SELECT property, count(*) FROM webmentions WHERE status = 'valid' GROUP BY property;").fetchall()
 
-        return render_template("stats.html", received_count=get_webmentions, sent_count=get_sent_webmentions, received_types=received_types)
+        pending_webmention_count = cursor.execute("SELECT count(*) FROM webmentions WHERE status = 'validating';").fetchone()[0]
+
+        return render_template("stats.html", received_count=get_webmentions, sent_count=get_sent_webmentions, received_types=received_types, pending_webmention_count=pending_webmention_count)
 
 @main.route("/rss")
 def rss():

@@ -14,7 +14,7 @@
     <p>Before you get started, please make sure your domain is configured to use IndieAuth authentication. You can do this by following the instructions on the <a href="https://indieauth.com/setup">indieauth.com Setup page</a>. Setting up IndieAuth on your domain should only take a few minutes.<p>
     <p>With IndieAuth set up on your home page, you are ready to log in to the webmention dashboard where you will keep track of the webmentions you receive.</p>
     <p>After logging in, add the following tag to the <code>&#60;head&#62;</code> tag on your web page:</p>
-    <code><pre>&#60;link rel="webmention" href="{{ config.CLIENT_ID }}"&#62;</pre></code>
+    <code><pre>&#60;link rel="webmention" href="{{ config.CLIENT_ID }}/endpoint"&#62;</pre></code>
     <p>This tag will be used by webmention senders to find your webmention endpoint.</p>
     <p>Once this tag has been added to your site, you are ready to start receiving webmentions on your web page.</p>
     <p>All you have to do is to get someone to send you a webmention. That webmention should show up on your dashboard that is visible when you log in.</p>
