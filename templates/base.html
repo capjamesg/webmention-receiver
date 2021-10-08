@@ -31,6 +31,7 @@
         {% block content %}
         {% endblock %}
       </div>
+      {% if config.SHOW_SETUP == True or session.get("me") %}
       <footer>
         <ul>
           {% if config.SHOW_SETUP == True %}
@@ -43,6 +44,7 @@
           {% endif %}
         </ul>
       </footer>
+      {% endif %}
       <p class="accessibility_label"><a href="#main">Go Back to the Top</a></p>
     </main>
   </body>
