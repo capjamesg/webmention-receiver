@@ -1,5 +1,6 @@
 from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
 from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP, CLIENT_ID
+from .send_views import send_function
 from .indieauth import requires_indieauth
 from bs4 import BeautifulSoup
 import requests
@@ -316,9 +317,8 @@ def webhook_check():
             else:
                 last_url_sent = ""
             
-            if last_url_sent != entries[0]['properties']['uid'][0]:
+            if last_url_sent != entries[0]['properties']['url'][0]:
                 for entry in entries:
-                    print('x')
                     if last_url_sent == entry['properties']['url'][0]:
                         break
 
@@ -333,12 +333,12 @@ def webhook_check():
 
                         for url in links:
                             print("Sending webmention to {}".format(url))
-                            requests.post(CLIENT_ID.strip("/") + "/send/open", data={"source": entry['properties']['url'][0], "target": url})
+                            send_function(entry['properties']['url'][0], url)
                             
             if not last_url_sent:
-                cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['uid'][0]))
+                cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['url'][0]))
             else:
-                cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['uid'][0], feed_url))
+                cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
 
         return jsonify({"message": "Webmentions sent."}), 200
 
