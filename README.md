@@ -87,36 +87,13 @@ Examples are provided in the config.py file.
 
 ### Setting up the database
 
-A database is required to run this project. Create a database file called webmentions.db and use sqlite3 to enter it:
+To set up the database for this project, execute the following command:
 
-    sqlite3 webmentions.db
+    flask seed create-tables
 
-Use these commands to create the tables necessary to run this project:
+The command above creates the database tables for this project.
 
-    CREATE TABLE webmentions (
-        source,
-        target,
-        property,
-        contents,
-        author_name,
-        author_photo,
-        author_url,
-        content_html,
-        received_date,
-        status
-    );
-
-    CREATE TABLE sent_webmentions (
-        source,
-        target,
-        sent_date,
-        status_code,
-        response,
-        webmention_endpoint,
-        location_header
-    );
-
-After following these steps, you are ready to use the endpoint. To run the server, run this command:
+Now you are ready to use the endpoint. To run the server, run this command:
 
     flask run
 
@@ -127,6 +104,18 @@ To process webmentions, you should set up a cron job that executes the validate_
     0 * * * * python3 /path/to/webmention_receiver/validate_webmention.py
 
 api-key should be equal to the value of api-key that you set in your .env file.
+
+## Configuring Automatic Webmention Sending
+
+You can request that mentions are sent to all links in a h-feed as soon as you publish a resource on your website.
+
+This is useful if you want people who use webmentions to get notified when you link to their content without having to manually send webmentions to each link.
+
+You can do this by triggering the following webhook after your site has been deployed:
+
+    https://yourwebmentionendpoint.com/webhook?url=https://yourdomain.com/
+
+This webhook can be triggered for any URL on your site that contains a h-feed.
 
 ## License
 

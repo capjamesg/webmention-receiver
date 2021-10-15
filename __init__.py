@@ -51,6 +51,10 @@ def create_app():
 
     app.register_blueprint(send_blueprint)
 
+    from .seed import seed_db as seed_blueprint
+
+    app.register_blueprint(seed_blueprint)
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
