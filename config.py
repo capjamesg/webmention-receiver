@@ -22,7 +22,7 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 CALLBACK_URL = "http://localhost:5001/callback"
 CLIENT_ID = "http://localhost:5001/"
-TOKEN_ENDPOINT = "https://tokens.indieauth.com/token"
+TOKEN_ENDPOINT = "http://localhost:5000/token"
 ME = "https://jamesg.blog/"
 
 SHOW_SETUP = False

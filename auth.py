@@ -1,12 +1,11 @@
-from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
-import requests
-import datetime
-from bs4 import BeautifulSoup
-import sqlite3
-from .config import ROOT_DIRECTORY, RSS_DIRECTORY
+from flask import request, render_template, redirect, flash, Blueprint, session, current_app
+from .config import TOKEN_ENDPOINT, CLIENT_ID, CALLBACK_URL
 from .indieauth import requires_indieauth
-import math
-import json
+import requests
+import hashlib
+import base64
+import string
+import random
 
 auth = Blueprint('auth', __name__)
 
@@ -16,19 +15,24 @@ def indieauth_callback():
 
     data = {
         "code": code,
-        "redirect_uri": current_app.config["CALLBACK_URL"],
-        "client_id": current_app.config["CLIENT_ID"]
+        "redirect_uri": CALLBACK_URL,
+        "client_id": CLIENT_ID,
+        "grant_type": "authorization_code",
+        "code_verifier": session["code_verifier"]
     }
 
     headers = {
         "Accept": "application/json"
     }
 
-    r = requests.post("https://tokens.indieauth.com/token", data=data, headers=headers)
+    r = requests.post(TOKEN_ENDPOINT, data=data, headers=headers)
     
     if r.status_code != 200:
         flash("Your authentication failed. Please try again.")
         return redirect("/login")
+
+    # remove code verifier from session because the authentication flow has finished
+    session.pop("code_verifier")
 
     if r.json().get("me").strip("/") != current_app.config["ME"].strip("/"):
         flash("Your domain is not allowed to access this website.")
@@ -49,4 +53,14 @@ def logout():
 
 @auth.route("/login", methods=["GET", "POST"])
 def login():
-    return render_template("auth.html", title="Webmention Dashboard Login")
+    random_code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
+
+    session["code_verifier"] = random_code
+
+    sha256_code = hashlib.sha256(random_code.encode('utf-8')).hexdigest()
+
+    code_challenge = base64.b64encode(sha256_code.encode('utf-8')).decode('utf-8')
+
+    state = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+
+    return render_template("auth.html", title="Webmention Dashboard Login", code_challenge=code_challenge, state=state)
