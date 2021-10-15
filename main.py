@@ -1,10 +1,11 @@
 from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
+from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP, CLIENT_ID
+from .indieauth import requires_indieauth
+from bs4 import BeautifulSoup
 import requests
 import datetime
-from bs4 import BeautifulSoup
 import sqlite3
-from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP
-from .indieauth import requires_indieauth
+import mf2py
 import math
 import json
 
@@ -275,6 +276,71 @@ def retrieve_webmentions():
     response.headers['Access-Control-Allow-Origin'] = '*'
 
     return response, 200
+
+@main.route("/webhook")
+def webhook_check():
+    connection = sqlite3.connect("webmentions.db")
+    key = request.args.get("key")
+    
+    with connection:
+        cursor = connection.cursor()
+
+        get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
+        
+        if (get_key and len(get_key) == 0):
+            return jsonify({"message": "You must be authenticated to access this resource."}), 403
+
+        feed_url = request.args.get('url')
+
+        if not feed_url:
+            return jsonify({"message": "You must provide a url to check."}), 400
+
+        last_url_sent = cursor.execute("SELECT feed_url, last_url_sent FROM webhooks WHERE feed_url = ?;", (feed_url, )).fetchone()
+
+        parsed = mf2py.Parser(url=feed_url).to_dict()
+
+        # find h_feed item
+        h_feed = [item["children"] for item in parsed['items'] if item['type'] == ['h-feed'] or item['type'] == "h-feed"]
+
+        # get all h-entries
+        if h_feed:
+            entries = [item for item in h_feed[0] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
+        else:
+            entries = [item for item in parsed["items"] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
+
+        domain = feed_url.split("/")[2]
+
+        if len(entries) > 0:
+            if last_url_sent != None:
+                last_url_sent = last_url_sent[1]
+            else:
+                last_url_sent = ""
+            
+            if last_url_sent != entries[0]['properties']['uid'][0]:
+                for entry in entries:
+                    print('x')
+                    if last_url_sent == entry['properties']['url'][0]:
+                        break
+
+                    get_page = requests.get(entry['properties']['url'][0])
+
+                    if get_page.status_code == 200:
+
+                        soup = BeautifulSoup(get_page.text, 'html.parser')
+                        links = [link for link in soup.find_all('a') if link.get("href") and not link.get("href").startswith("https://" + domain) \
+                            and not link.get("href").startswith("http://" + domain) and not link.get("href").split(":") != "http"  and not link.get("href").split(":") != "https" \
+                            and not link.get("href").startswith("/") and not link.get("href").startswith("#") and not link.get("href").startswith("javascript:")]
+
+                        for url in links:
+                            print("Sending webmention to {}".format(url))
+                            requests.post(CLIENT_ID.strip("/") + "/send/open", data={"source": entry['properties']['url'][0], "target": url})
+                            
+            if not last_url_sent:
+                cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['uid'][0]))
+            else:
+                cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['uid'][0], feed_url))
+
+        return jsonify({"message": "Webmentions sent."}), 200
 
 @main.route("/stats")
 @requires_indieauth
