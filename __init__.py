@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from .config import SECRET_KEY
 import dateutil.parser
 import os
 
@@ -23,7 +24,7 @@ def create_app():
 
     db.init_app(app)
 
-    app.secret_key = os.urandom(24)
+    app.secret_key = SECRET_KEY
 
     from .models import User
 
