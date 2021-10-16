@@ -12,17 +12,10 @@
           </p>
       {% endif %}
       {% endwith %}
-      <form action="{{ config.AUTH_ENDPOINT }}" method="GET">
+      <form action="/discover" method="POST">
         <label for="indie_auth_url">Web Address:</label><br>
         <input id="indie_auth_url" type="url" name="me" placeholder="https://yourdomain.com" /><br>
         <input type="submit" value="Sign In" />
-        <input type="hidden" name="client_id" value="{{ config.CLIENT_ID }}" />
-        <input type="hidden" name="redirect_uri" value="{{ config.CALLBACK_URL }}" />
-        <input type="hidden" name="response_type" value="code" />
-        <input type="hidden" name="scope" value="create profile" />
-        <input type="hidden" name="state" value="{{ state }}" />
-        <input type="hidden" name="code_challenge" value="{{ code_challenge }}" />
-        <input type="hidden" name="code_challenge_method" value="S256" />
       </form>
   </section>
 {% endblock %}

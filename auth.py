@@ -1,6 +1,7 @@
 from flask import request, render_template, redirect, flash, Blueprint, session, current_app
 from .config import TOKEN_ENDPOINT, CLIENT_ID, CALLBACK_URL
 from .indieauth import requires_indieauth
+from bs4 import BeautifulSoup
 import requests
 import hashlib
 import base64
@@ -12,6 +13,11 @@ auth = Blueprint('auth', __name__)
 @auth.route("/callback")
 def indieauth_callback():
     code = request.args.get("code")
+    state = request.args.get("state")
+
+    if state != session.get("state"):
+        flash("Your authentication failed. Please try again.")
+        return redirect("/")
 
     data = {
         "code": code,
@@ -28,7 +34,7 @@ def indieauth_callback():
     r = requests.post(TOKEN_ENDPOINT, data=data, headers=headers)
     
     if r.status_code != 200:
-        flash("Your authentication failed. Please try again.")
+        flash("There was an error with your token endpoint server.")
         return redirect("/login")
 
     # remove code verifier from session because the authentication flow has finished
@@ -51,8 +57,26 @@ def logout():
 
     return redirect("/home")
 
-@auth.route("/login", methods=["GET", "POST"])
-def login():
+@auth.route("/discover", methods=["POST"])
+def discover_auth_endpoint():
+    domain = request.form.get("me")
+
+    r = requests.get(domain)
+
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    auth_endpoint = soup.find("link", rel="authorization_endpoint")
+
+    if auth_endpoint is None:
+        flash("An IndieAuth endpoint could not be found on your website.")
+        return redirect("/login")
+
+    if not auth_endpoint.get("href").startswith("https://") and not auth_endpoint.get("href").startswith("http://"):
+        flash("Your IndieAuth endpoint published on your site must be a full HTTP URL.")
+        return redirect("/login")
+
+    auth_endpoint = auth_endpoint["href"]
+
     random_code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
 
     session["code_verifier"] = random_code
@@ -63,4 +87,10 @@ def login():
 
     state = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
 
-    return render_template("auth.html", title="Webmention Dashboard Login", code_challenge=code_challenge, state=state)
+    session["state"] = state
+
+    return redirect(auth_endpoint + "?client_id=" + CLIENT_ID + "&redirect_uri=" + CALLBACK_URL + "&scope=profile&response_type=code&code_challenge=" + code_challenge + "&code_challenge_method=S256&state=" + state)
+
+@auth.route("/login", methods=["GET", "POST"])
+def login():
+    return render_template("auth.html", title="Webmention Dashboard Login")
