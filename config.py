@@ -29,4 +29,4 @@ CALLBACK_URL = "http://localhost:5000/callback"
 
 SHOW_SETUP = False
 
-SECRET_KEY = "ihfjkdf"
+SECRET_KEY = "youchoosewhatthisis, keep it secret"
