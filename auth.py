@@ -31,7 +31,7 @@ def indieauth_callback():
         "Accept": "application/json"
     }
 
-    r = requests.post(session.get("authorization_endpoint"), data=data, headers=headers)
+    r = requests.post(session.get("token_endpoint"), data=data, headers=headers)
     
     if r.status_code != 200:
         flash("There was an error with your token endpoint server.")
