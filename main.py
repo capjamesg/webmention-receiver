@@ -280,7 +280,7 @@ def retrieve_webmentions():
 
 @main.route("/webhook")
 def webhook_check():
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
     key = request.args.get("key")
     
     with connection:
