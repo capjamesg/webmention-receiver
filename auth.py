@@ -68,7 +68,7 @@ def discover_auth_endpoint():
     token_endpoint = soup.find("link", rel="token_endpoint")
 
     if token_endpoint is None:
-        flash("An IndieAuth etoken ndpoint could not be found on your website.")
+        flash("An IndieAuth token ndpoint could not be found on your website.")
         return redirect("/login")
 
     if not token_endpoint.get("href").startswith("https://") and not token_endpoint.get("href").startswith("http://"):
@@ -80,7 +80,7 @@ def discover_auth_endpoint():
     random_code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
 
     session["code_verifier"] = random_code
-    session["token_endpoint"] = token_endpoint
+    session["token_endpoint"] = token_endpoint["href"]
 
     sha256_code = hashlib.sha256(random_code.encode('utf-8')).hexdigest()
 
