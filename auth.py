@@ -31,7 +31,7 @@ def indieauth_callback():
         "Accept": "application/json"
     }
 
-    r = requests.post(session.get("token_endpoint"), data=data, headers=headers)
+    r = requests.post(session.get("authorization_endpoint"), data=data, headers=headers)
     
     if r.status_code != 200:
         flash("There was an error with your token endpoint server.")
@@ -65,6 +65,16 @@ def discover_auth_endpoint():
 
     soup = BeautifulSoup(r.text, "html.parser")
 
+    authorization_endpoint = soup.find("link", rel="authorization_endpoint")
+
+    if authorization_endpoint is None:
+        flash("An IndieAuth authorization ndpoint could not be found on your website.")
+        return redirect("/login")
+
+    if not authorization_endpoint.get("href").startswith("https://") and not authorization_endpoint.get("href").startswith("http://"):
+        flash("Your IndieAuth authorization endpoint published on your site must be a full HTTP URL.")
+        return redirect("/login")
+
     token_endpoint = soup.find("link", rel="token_endpoint")
 
     if token_endpoint is None:
@@ -75,11 +85,12 @@ def discover_auth_endpoint():
         flash("Your IndieAuth token endpoint published on your site must be a full HTTP URL.")
         return redirect("/login")
 
-    auth_endpoint = token_endpoint["href"]
+    auth_endpoint = authorization_endpoint["href"]
 
     random_code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
 
     session["code_verifier"] = random_code
+    session["authorization_endpoint"] = auth_endpoint
     session["token_endpoint"] = token_endpoint["href"]
 
     sha256_code = hashlib.sha256(random_code.encode('utf-8')).hexdigest()
