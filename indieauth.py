@@ -70,6 +70,7 @@ def check_auth(access_token):
       headers={"Authorization": ("Bearer %s" % access_token)}
     )
     contents = urlopen(request).read().decode('utf-8')
+    
     token_data = json.loads(contents)
 
     me = token_data['me']
@@ -86,13 +87,13 @@ def check_auth(access_token):
     scope = token_data['scope']
     if not isinstance(scope, str):
         scope = scope[0]
-    valid_scopes = ('post','create', 'read', 'follow', 'mute', 'block', 'channels')
+    valid_scopes = ('profile',)
     scope_ = scope.split()
     scope_valid = any((val in scope_) for val in valid_scopes)
 
     if not scope_valid:
-        current_app.logger.error("Scope '%s' does not contain 'post' or 'create'." % scope)
-        return deny("Scope '%s' does not contain 'post' or 'create'." % scope)
+        current_app.logger.error("Scope '%s' does not contain 'profile'." % scope)
+        return deny("Scope '%s' does not contain 'profile'." % scope)
 
     g.user = {
       'me': me,
