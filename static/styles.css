@@ -7,6 +7,9 @@ a {
 html {
 	background-color: #FFEFD5;
 	font-family: "Helvetica Neue", Helvetica, sans-serif;
+	margin: 0;
+    word-wrap: break-word;
+    overflow-x: hidden;
 }
 main {
 	max-width: 100vh;
