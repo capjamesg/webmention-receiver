@@ -316,6 +316,8 @@ def webhook_check():
                 last_url_sent = last_url_sent[1]
             else:
                 last_url_sent = ""
+
+            last_url_sent = ""
             
             if last_url_sent != entries[0]['properties']['url'][0]:
                 for entry in entries:
@@ -327,9 +329,17 @@ def webhook_check():
                     if get_page.status_code == 200:
 
                         soup = BeautifulSoup(get_page.text, 'html.parser')
-                        links = [link for link in soup.find_all('a') if link.get("href") and not link.get("href").startswith("https://" + domain) \
-                            and not link.get("href").startswith("http://" + domain) and not link.get("href").split(":") != "http"  and not link.get("href").split(":") != "https" \
+
+                        if soup.select(".e-content"):
+                            soup = soup.select(".e-content")[0]
+                        else:
+                            continue
+
+                        links = [link.get("href") for link in soup.find_all('a') if link.get("href") and not link.get("href").startswith("https://" + domain) \
+                            and not link.get("href").startswith("http://" + domain) \
                             and not link.get("href").startswith("/") and not link.get("href").startswith("#") and not link.get("href").startswith("javascript:")]
+
+                        links = list(set(links))
 
                         for url in links:
                             print("Sending webmention to {}".format(url))
