@@ -1,5 +1,5 @@
 from flask import request, render_template, redirect, flash, Blueprint, session, current_app
-from .config import TOKEN_ENDPOINT, CLIENT_ID, CALLBACK_URL
+from .config import AUTH_ENDPOINT, TOKEN_ENDPOINT, CLIENT_ID, CALLBACK_URL
 from .indieauth import requires_indieauth
 from bs4 import BeautifulSoup
 import requests
@@ -31,7 +31,7 @@ def indieauth_callback():
         "Accept": "application/json"
     }
 
-    r = requests.post(TOKEN_ENDPOINT, data=data, headers=headers)
+    r = requests.post(session.get("token_endpoint"), data=data, headers=headers)
     
     if r.status_code != 200:
         flash("There was an error with your token endpoint server.")
@@ -65,21 +65,22 @@ def discover_auth_endpoint():
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-    auth_endpoint = soup.find("link", rel="authorization_endpoint")
+    token_endpoint = soup.find("link", rel="token_endpoint")
 
-    if auth_endpoint is None:
-        flash("An IndieAuth endpoint could not be found on your website.")
+    if token_endpoint is None:
+        flash("An IndieAuth etoken ndpoint could not be found on your website.")
         return redirect("/login")
 
-    if not auth_endpoint.get("href").startswith("https://") and not auth_endpoint.get("href").startswith("http://"):
-        flash("Your IndieAuth endpoint published on your site must be a full HTTP URL.")
+    if not token_endpoint.get("href").startswith("https://") and not token_endpoint.get("href").startswith("http://"):
+        flash("Your IndieAuth token endpoint published on your site must be a full HTTP URL.")
         return redirect("/login")
 
-    auth_endpoint = auth_endpoint["href"]
+    auth_endpoint = token_endpoint["href"]
 
     random_code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
 
     session["code_verifier"] = random_code
+    session["token_endpoint"] = token_endpoint
 
     sha256_code = hashlib.sha256(random_code.encode('utf-8')).hexdigest()
 
