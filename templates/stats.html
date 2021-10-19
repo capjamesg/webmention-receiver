@@ -29,6 +29,8 @@
         {% set post_type = "🔁 Repost" %}
         {% elif type == "reply" %}
         {% set post_type = "💬 Reply" %}
+        {% elif type == "poke-of" %}
+        {% set post_type = "👉 Poke" %}
         {% else %}
         {% set post_type = "❓ Unknown" %}
         {% endif %}
