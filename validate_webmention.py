@@ -108,6 +108,9 @@ def validate_webmentions():
             if parsed_h_entry.get("bookmark-of") and parsed_h_entry.get("bookmark-of"):
                 post_type = "bookmark-of"
 
+            if soup.select(".u-poke-of") or soup.select(".poke-of"):
+                post_type = "poke-of"
+
             # Convert webmention published date to a readable timestamp rather than a datetime object per default (returns error and causes malformed parsing)
             if parsed_h_entry.get("published"):
                 parsed_h_entry["published"] = parsed_h_entry["published"].strftime("%m/%d/%Y %H:%M:%S")
