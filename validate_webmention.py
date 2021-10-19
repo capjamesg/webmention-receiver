@@ -6,7 +6,8 @@ import random
 import requests
 import datetime
 from bs4 import BeautifulSoup
-from create_rss_feed import generate_feed
+# from create_rss_feed import generate_feed
+import emoji
 
 ROOT_DIRECTORY = "/home/capjamesg/"
 
@@ -28,7 +29,7 @@ def validate_headers(request_item, cursor, source, target):
     return validated
 
 def validate_webmentions():
-    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+    connection = sqlite3.connect("webmentions.db")
     
     cursor = connection.cursor()
 
@@ -111,6 +112,9 @@ def validate_webmentions():
             if soup.select(".u-poke-of") or soup.select(".poke-of"):
                 post_type = "poke-of"
 
+            if parsed_h_entry.get("content") and parsed_h_entry.get("content") in emoji.UNICODE_EMOJI:
+                post_type = "reacji"
+
             # Convert webmention published date to a readable timestamp rather than a datetime object per default (returns error and causes malformed parsing)
             if parsed_h_entry.get("published"):
                 parsed_h_entry["published"] = parsed_h_entry["published"].strftime("%m/%d/%Y %H:%M:%S")
@@ -169,4 +173,4 @@ def validate_webmentions():
 
 validate_webmentions()
 
-generate_feed()
+# generate_feed()
