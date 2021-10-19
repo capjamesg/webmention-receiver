@@ -10,7 +10,7 @@ import mf2py
 import math
 import json
 
-main = Blueprint("main", __name__)
+main = Blueprint("main", __name__, static_folder="static", static_url_path="")
 
 def change_to_json(database_result):
     columns = [column[0] for column in database_result.description]
@@ -60,7 +60,6 @@ def homepage():
     return render_template("feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
 
 @main.route("/endpoint", methods=["POST"])
-@requires_indieauth
 def receiver():
     # Process as www-form-encoded as per spec
     if request.content_type != "application/x-www-form-urlencoded":
@@ -217,7 +216,7 @@ def retrieve_sent_webmentions_json():
         
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-        if (get_key and len(get_key) == 0) and not session.get("me"):
+        if ((get_key and len(get_key) == 0) and not session.get("me")) or not get_key:
             return jsonify({"message": "You must be authenticated to retrieve all sent webmentions."}), 403
 
         if status == "valid":
@@ -288,7 +287,7 @@ def webhook_check():
 
         get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
         
-        if (get_key and len(get_key) == 0):
+        if (get_key and len(get_key) == 0) or not get_key:
             return jsonify({"message": "You must be authenticated to access this resource."}), 403
 
         feed_url = request.args.get('url')
@@ -379,7 +378,7 @@ def rss():
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
     
-    if (get_key and len(get_key) == 0) and not session.get("me"):
+    if ((get_key and len(get_key) == 0) and not session.get("me")) or not get_key:
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
     
     return send_from_directory(RSS_DIRECTORY + "/static/", "webmentions.xml")
@@ -387,6 +386,14 @@ def rss():
 @main.route("/static/images/<path:filename>")
 def send_images(filename):
     return send_from_directory(ROOT_DIRECTORY + "/webmention_receiver/static/images/", filename)
+
+@main.route("/robots.txt")
+def robots():
+    return send_from_directory(main.static_folder, "robots.txt")
+
+@main.route("/favicon.ico")
+def favicon():
+    return send_from_directory(main.static_folder, "favicon.ico")
 
 @main.route("/setup")
 def setup_page():

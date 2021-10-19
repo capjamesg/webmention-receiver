@@ -10,9 +10,12 @@ import json
 
 send = Blueprint('send', __name__, template_folder='templates')
 
-@send.route("/discover", methods=["POST"])
+@send.route("/discover")
 def discover():
     target = request.args.get("target")
+
+    if not target:
+        return jsonify({"error": "No target specified."})
 
     r = requests.get(target, allow_redirects=True)
 
