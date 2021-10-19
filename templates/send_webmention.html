@@ -13,9 +13,9 @@
         {% endif %}
     {% endwith %}
     <form action="/send" method="POST">
-        <label for="source">Webmention source:</label><br>
+        <label for="source">Webmention source (the page on your site that links to athe recipient):</label><br>
         <input type="url" name="source" id="source" placeholder="https://jamesg.blog/your-webmention-source" pattern="https://.*" required/><br>
-        <label for="target">Webmention target:</label><br>
+        <label for="target">Webmention recipient:</label><br>
         <input type="url" name="target" id="target" placeholder="https://jamesg.blog/webmention-target" pattern="https://.*" required/><br>
         <input type="submit" value="Submit Webmention">
     </form>
