@@ -102,11 +102,7 @@ def validate_webmentions():
         get_pending_webmentions = cursor.execute("SELECT to_check FROM pending_webmentions;").fetchall()
 
         for item in get_pending_webmentions:
-            try:
-                process_pending_webmention(item, cursor)
-            except Exception as e:
-                print(e)
-                continue
+            process_pending_webmention(item, cursor)
             
         get_webmentions_for_url = cursor.execute("SELECT source, target FROM webmentions WHERE status = 'validating';").fetchall()
 
@@ -134,7 +130,11 @@ def validate_webmentions():
 
                 continue
 
-            get_source_for_validation = session.get(source).text
+            try:
+                get_source_for_validation = session.get(source).text
+            except Exception as e:
+                print(e)
+                continue
 
             if not validated_headers:
                 validated_headers = validate_headers(check_source_size, cursor, source, target)
