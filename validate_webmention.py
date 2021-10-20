@@ -1,3 +1,5 @@
+from bs4 import BeautifulSoup
+import send_function
 import sqlite3
 import mf2py
 import mf2util
@@ -5,7 +7,6 @@ import string
 import random
 import requests
 import datetime
-from bs4 import BeautifulSoup
 # from create_rss_feed import generate_feed
 import emoji
 
@@ -28,12 +29,81 @@ def validate_headers(request_item, cursor, source, target):
 
     return validated
 
+def process_pending_webmention(item, cursor):
+    feed_url = item[0]
+
+    last_url_sent = cursor.execute("SELECT feed_url, last_url_sent FROM webhooks WHERE feed_url = ?;", (feed_url, )).fetchone()
+
+    parsed = mf2py.Parser(url=feed_url).to_dict()
+
+    # find h_feed item
+    h_feed = [item["children"] for item in parsed['items'] if item['type'] == ['h-feed'] or item['type'] == "h-feed"]
+
+    # get all h-entries
+    if h_feed:
+        entries = [item for item in h_feed[0] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
+    else:
+        entries = [item for item in parsed["items"] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
+
+    domain = feed_url.split("/")[2]
+
+    if len(entries) > 0:
+        if last_url_sent != None:
+            last_url_sent = last_url_sent[1]
+        else:
+            last_url_sent = ""
+
+        last_url_sent = ""
+        
+        if last_url_sent != entries[0]['properties']['url'][0]:
+            for entry in entries:
+                if last_url_sent == entry['properties']['url'][0]:
+                    break
+
+                get_page = requests.get(entry['properties']['url'][0])
+
+                if get_page.status_code == 200:
+
+                    soup = BeautifulSoup(get_page.text, 'html.parser')
+
+                    if soup.select(".e-content"):
+                        soup = soup.select(".e-content")[0]
+                    else:
+                        continue
+
+                    links = [link.get("href") for link in soup.find_all('a') if link.get("href") and not link.get("href").startswith("https://" + domain) \
+                        and not link.get("href").startswith("http://" + domain) \
+                        and not link.get("href").startswith("/") and not link.get("href").startswith("#") and not link.get("href").startswith("javascript:")]
+
+                    links = list(set(links))
+
+                    for url in links:
+                        _, item = send_function.send_function(url, entry['properties']['url'][0])
+
+                        if item == None:
+                            continue
+
+                        # Add webmentions to sent_webmentions table
+                        
+                        cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item) )
+                        print("Webmention sent to " + item[0] + " from " + item[1])
+                    
+    if not last_url_sent:
+        cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['url'][0]))
+    else:
+        cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
+
 def validate_webmentions():
     connection = sqlite3.connect("webmentions.db")
     
     cursor = connection.cursor()
 
     with connection:
+        get_pending_webmentions = cursor.execute("SELECT to_check FROM pending_webmentions;").fetchall()
+
+        for item in get_pending_webmentions:
+            process_pending_webmention(item, cursor)
+            
         get_webmentions_for_url = cursor.execute("SELECT source, target FROM webmentions WHERE status = 'validating';").fetchall()
 
         for u in get_webmentions_for_url:
