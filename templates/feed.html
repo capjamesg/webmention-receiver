@@ -32,7 +32,7 @@
         {% else %}
         {% endif %}
         {% endif %}
-          <p>{{ post_type }} from {% if w[5] %}{{ w[5] }}{% else %}{{ w[0].split("//")[1].split("/")[0] }} {% endif %} to <a href="{{ w[1] }}">{{ w[1] }}</a>. Received on {{ w[2] | convert_time }}.</p>
+          <p>{{ post_type }} from {% if w[5] %}<a href="{{ w[0] }}">{{ w[5] }}</a>{% else %}<a href="{{ w[0] }}">{{ w[0].split("//")[1].split("/")[0] }}</a> {% endif %} to <a href="{{ w[1] }}">{{ w[1] }}</a>. Received on {{ w[2] | convert_time }}.</p>
           <form action="/delete" method="POST">
             <input type="hidden" name="source" value="{{ w[0] }}">
             <input type="hidden" name="target" value="{{ w[1] }}">
