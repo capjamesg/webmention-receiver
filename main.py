@@ -1,6 +1,5 @@
 from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
-from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP, CLIENT_ID
-from .send_views import send_function
+from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP
 from .indieauth import requires_indieauth
 from bs4 import BeautifulSoup
 import requests
@@ -194,7 +193,7 @@ def view_sent_webmention(wm):
 
         webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
 
-        parsed_response = str(webmention[5].replace("'", "\""))
+        parsed_response = str(webmention[5]).replace("'", "\"")
 
         final_parsed_response = json.loads(parsed_response)
         
@@ -263,11 +262,18 @@ def retrieve_webmentions():
 
     if not target:
         get_webmentions = cursor.execute("SELECT * FROM webmentions;")
+        count = cursor.execute("SELECT COUNT(id), property FROM webmentions GROUP BY property;").fetchall()
     else:
         get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date ASC;".format(where_clause), attributes, )
+        count = cursor.execute("SELECT COUNT(id), property FROM webmentions {} GROUP BY property;".format(where_clause), attributes, ).fetchall()
     
     if not get_key and session.get("me") and where_clause == "":
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
+
+    aggregate_count = 0
+
+    for item in count:
+        aggregate_count += item[0]
 
     result = change_to_json(get_webmentions)
 
@@ -275,7 +281,11 @@ def retrieve_webmentions():
     response = jsonify(result)
     response.headers['Access-Control-Allow-Origin'] = '*'
 
-    return response, 200
+    return jsonify({
+        "count": aggregate_count,
+        "count_by_property": count,
+        "webmentions": response
+    }), 200
 
 @main.route("/webhook", methods=["GET", "POST"])
 def webhook_check():
@@ -295,61 +305,14 @@ def webhook_check():
         if not feed_url:
             return jsonify({"message": "You must provide a url to check."}), 400
 
-        last_url_sent = cursor.execute("SELECT feed_url, last_url_sent FROM webhooks WHERE feed_url = ?;", (feed_url, )).fetchone()
+        check_if_queued = cursor.execute("SELECT * FROM pending_webmentions WHERE to_check = ?", (feed_url, )).fetchone()
 
-        parsed = mf2py.Parser(url=feed_url).to_dict()
+        if check_if_queued:
+            return jsonify({"message": "This url is already queued to be checked."}), 400
 
-        # find h_feed item
-        h_feed = [item["children"] for item in parsed['items'] if item['type'] == ['h-feed'] or item['type'] == "h-feed"]
+        cursor.execute("INSERT INTO pending_webmentions (to_check) VALUES (?);", (feed_url, ))
 
-        # get all h-entries
-        if h_feed:
-            entries = [item for item in h_feed[0] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
-        else:
-            entries = [item for item in parsed["items"] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
-
-        domain = feed_url.split("/")[2]
-
-        if len(entries) > 0:
-            if last_url_sent != None:
-                last_url_sent = last_url_sent[1]
-            else:
-                last_url_sent = ""
-
-            last_url_sent = ""
-            
-            if last_url_sent != entries[0]['properties']['url'][0]:
-                for entry in entries:
-                    if last_url_sent == entry['properties']['url'][0]:
-                        break
-
-                    get_page = requests.get(entry['properties']['url'][0])
-
-                    if get_page.status_code == 200:
-
-                        soup = BeautifulSoup(get_page.text, 'html.parser')
-
-                        if soup.select(".e-content"):
-                            soup = soup.select(".e-content")[0]
-                        else:
-                            continue
-
-                        links = [link.get("href") for link in soup.find_all('a') if link.get("href") and not link.get("href").startswith("https://" + domain) \
-                            and not link.get("href").startswith("http://" + domain) \
-                            and not link.get("href").startswith("/") and not link.get("href").startswith("#") and not link.get("href").startswith("javascript:")]
-
-                        links = list(set(links))
-
-                        for url in links:
-                            print("Sending webmention to {}".format(url))
-                            send_function(entry['properties']['url'][0], url)
-                            
-            if not last_url_sent:
-                cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['url'][0]))
-            else:
-                cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
-
-        return jsonify({"message": "Webmentions sent."}), 200
+    return jsonify({"message": "URLs queued for processing."}), 202
 
 @main.route("/stats")
 @requires_indieauth
