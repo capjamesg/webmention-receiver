@@ -94,7 +94,7 @@ def process_pending_webmention(item, cursor):
         cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
 
 def validate_webmentions():
-    connection = sqlite3.connect("webmentions.db")
+    connection = sqlite3.connect(ROOT_DIRECTORY + "webmentions.db")
     
     cursor = connection.cursor()
 
@@ -102,7 +102,11 @@ def validate_webmentions():
         get_pending_webmentions = cursor.execute("SELECT to_check FROM pending_webmentions;").fetchall()
 
         for item in get_pending_webmentions:
-            process_pending_webmention(item, cursor)
+            try:
+                process_pending_webmention(item, cursor)
+            except Exception as e:
+                print(e)
+                continue
             
         get_webmentions_for_url = cursor.execute("SELECT source, target FROM webmentions WHERE status = 'validating';").fetchall()
 
