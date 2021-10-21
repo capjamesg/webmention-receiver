@@ -1,16 +1,14 @@
 from bs4 import BeautifulSoup
-from config import ROOT_DIRECTORY
 import datetime
 import requests
-import sqlite3
 
 def send_function(source, target):
-    if not target.startswith("https://"):
-        message = "Target must use https:// protocol."
+    if not (source.startswith("http://") or source.startswith("https://")) and (target.startswith("http://") or target.startswith("https://")):
+        message = "Source and target must use http:// or https:// protocols."
         return message, None
 
     # set up bs4
-    r = requests.get(target, allow_redirects=True)
+    r = requests.get(target, allow_redirects=True, timeout=10)
 
     soup = BeautifulSoup(r.text, "lxml")
     

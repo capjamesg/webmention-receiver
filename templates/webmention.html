@@ -10,9 +10,5 @@
 <p>Sent: {{ webmention[3] | convert_time }}</p>
 <p>Status: {{ webmention[4] }}</p>
 <p>Message:</p>
-<ul>
-    {% for item in webmention[5] %}
-        <li>{{ item }}: webmention[5][item]</li>
-    {% endfor %}
-</ul>
+{{ response }}
 {% endblock %}
