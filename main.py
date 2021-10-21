@@ -189,17 +189,24 @@ def view_sent_webmention(wm):
             r = requests.get(webmention[7])
 
             if r.status_code == 200:
-                cursor.execute("UPDATE sent_webmentions SET response = ? AND location_header = ? WHERE source = ? AND target = ?", (r.text, "", webmention[1], webmention[2], ))
+                text = r.text
+            else:
+                text = "Error: {}, {}".format(r.status_code, r.text)
+
+            cursor.execute("UPDATE sent_webmentions SET response = ? AND location_header = ? WHERE source = ? AND target = ?", (text, "", webmention[1], webmention[2], ))
 
         webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
 
         parsed_response = str(webmention[5]).replace("'", "\"")
 
-        final_parsed_response = json.loads(parsed_response)
+        try:
+            final_parsed_response = json.loads(parsed_response)
+        except:
+            final_parsed_response = parsed_response
         
         if webmention:
             return render_template("webmention.html", webmention=webmention, title="Webmention to {} Details".format(webmention[1]), \
-                response=json.loads(final_parsed_response))
+                response=final_parsed_response)
         else:
             return abort(404)
 
@@ -260,32 +267,37 @@ def retrieve_webmentions():
 
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
-    if not target:
-        get_webmentions = cursor.execute("SELECT * FROM webmentions;")
-        count = cursor.execute("SELECT COUNT(id), property FROM webmentions GROUP BY property;").fetchall()
-    else:
-        get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date ASC;".format(where_clause), attributes, )
-        count = cursor.execute("SELECT COUNT(id), property FROM webmentions {} GROUP BY property;".format(where_clause), attributes, ).fetchall()
-    
     if not get_key and session.get("me") and where_clause == "":
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
 
+    if not target:
+        get_webmentions = cursor.execute("SELECT * FROM webmentions;")
+        result = change_to_json(get_webmentions)
+
+        count = cursor.execute("SELECT COUNT(source), property FROM webmentions GROUP BY property;").fetchall()
+    else:
+        get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date ASC;".format(where_clause), attributes, )
+        result = change_to_json(get_webmentions)
+
+        count = cursor.execute("SELECT COUNT(source), property FROM webmentions {} GROUP BY property;".format(where_clause), attributes, ).fetchall()
+
     aggregate_count = 0
+
+    parsed_counts = {}
 
     for item in count:
         aggregate_count += item[0]
+        parsed_counts[item[1]] = item[0]
+    
+    response = jsonify({
+        "count": aggregate_count,
+        "count_by_property": parsed_counts,
+        "webmentions": result
+    })
 
-    result = change_to_json(get_webmentions)
-
-    # send Access-Control-Allow-Origin header
-    response = jsonify(result)
     response.headers['Access-Control-Allow-Origin'] = '*'
 
-    return jsonify({
-        "count": aggregate_count,
-        "count_by_property": count,
-        "webmentions": response
-    }), 200
+    return response, 200
 
 @main.route("/webhook", methods=["GET", "POST"])
 def webhook_check():

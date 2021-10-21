@@ -78,7 +78,7 @@ def process_pending_webmention(item, cursor):
                     links = list(set(links))
 
                     for url in links:
-                        _, item = send_function.send_function(url, entry['properties']['url'][0])
+                        _, item = send_function.send_function(entry['properties']['url'][0], url)
 
                         if item == None:
                             continue
@@ -103,6 +103,8 @@ def validate_webmentions():
 
         for item in get_pending_webmentions:
             process_pending_webmention(item, cursor)
+        
+        cursor.execute("DELETE FROM pending_webmentions;")
             
         get_webmentions_for_url = cursor.execute("SELECT source, target FROM webmentions WHERE status = 'validating';").fetchall()
 

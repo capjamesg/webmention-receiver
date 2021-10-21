@@ -16,11 +16,11 @@ def create_app():
     # read config.py file
     app.config.from_pyfile(os.path.join(".", "config.py"), silent=False)
 
-    Limiter(
-        app,
-        key_func=get_remote_address,
-        default_limits=["200 per day", "50 per hour"]
-    )
+    # Limiter(
+    #     app,
+    #     key_func=get_remote_address,
+    #     default_limits=["200 per day", "50 per hour"]
+    # )
 
     db.init_app(app)
 
