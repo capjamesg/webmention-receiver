@@ -75,6 +75,7 @@ def send_webmention():
     if request.method == "POST":
         source = request.form.get("source")
         target = request.form.get("target")
+        vouch = request.form.get("vouch")
 
         message, item = send_function.send_function(source, target)
 
@@ -85,9 +86,21 @@ def send_webmention():
         # Add webmentions to sent_webmentions table
         connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
+        if vouch:
+            item.append(vouch)
+        else:
+            # "" means no vouch has been sent
+            item.append("")
+
+        # this means that the webmention has not yet been approved to show on my website
+        # 0 = not approved
+        # 1 = approved
+        # using numbers because sqlite only supports integers as booleans
+        item.append(0)
+
         with connection:
             cursor = connection.cursor()
-            cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item) )
+            cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header, vouch, approved_to_show) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item) )
             id = cursor.lastrowid
         
         return redirect("/sent/{}".format(id))
@@ -121,8 +134,10 @@ def send_webmention_anyone():
 
 
         # if domain is not approved, don't allow access
-        raw_domain = current_app.config["ME"].replace("http://", "").replace("https://", "")
-        if not target.startswith("http://" + raw_domain) or target.startswith("http://" + raw_domain):
+        raw_domain = current_app.config["ME"].split("/")[2]
+        target_domain = target.split("/")[2]
+
+        if not target_domain.endswith(raw_domain):
             message = {
                 "title": "Error: Target must be a {} post.".format(current_app.config["ME"]),
                 "description": "Target must be a {} post.".format(current_app.config["ME"]),

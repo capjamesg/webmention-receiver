@@ -1,11 +1,9 @@
 from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
 from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP
 from .indieauth import requires_indieauth
-from bs4 import BeautifulSoup
 import requests
 import datetime
 import sqlite3
-import mf2py
 import math
 import json
 
@@ -79,12 +77,12 @@ def receiver():
     if source.strip("/") == target.strip("/"):
         return jsonify({"message": "Source cannot be equal to target."}), 400
 
-    # valid_targets must be a tuple to be compatible with startswith
+    # a target must end with jamesg.blog to be considered valid for my endpoint
+    # where jamesg.blog is the ME config variable in my case
+    raw_domain = current_app.config["ME"].split("/")[2]
+    target_domain = target.split("/")[2]
 
-    raw_domain = current_app.config["ME"].replace("http://", "").replace("https://", "")
-
-    valid_targets = ("https://{}".format(raw_domain), "http://{}".format(raw_domain))
-    if not target.startswith(valid_targets):
+    if not target_domain.endswith(raw_domain):
         return jsonify({"message": "Target must be a {} resource.".format(raw_domain)}), 400
 
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")

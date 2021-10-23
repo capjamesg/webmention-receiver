@@ -9,6 +9,7 @@ import requests
 import datetime
 # from create_rss_feed import generate_feed
 import emoji
+import json
 
 ROOT_DIRECTORY = "/home/capjamesg/"
 
@@ -106,11 +107,15 @@ def validate_webmentions():
         
         cursor.execute("DELETE FROM pending_webmentions;")
             
-        get_webmentions_for_url = cursor.execute("SELECT source, target FROM webmentions WHERE status = 'validating';").fetchall()
+        get_webmentions_for_url = cursor.execute("SELECT source, target, vouch FROM webmentions WHERE status = 'validating';").fetchall()
 
         for u in get_webmentions_for_url:
             source = u[0]
             target = u[1]
+            vouch = u[2]
+
+            moderate = True
+
             print("processing webmention from {} to {}".format(source, target))
                 
             # Only allow 3 redirects before raising an error
@@ -146,6 +151,22 @@ def validate_webmentions():
                 cursor.execute("DELETE FROM webmentions WHERE source = ?;", (source, ))
 
                 continue
+
+            parse_page = BeautifulSoup(get_source_for_validation, 'html.parser')
+
+            # get all <link> tags
+            meta_links = parse_page.find_all("link")
+
+            for l in meta_links:
+                # use meta http-equiv status spec to detect 410s https://indieweb.org/meta_http-equiv_status
+                # detecting http-equiv status 410s is required by the webmention spec
+                if l.get("http-equiv") and l.get("http-equiv") == "Status":
+                    if l.get("content") == "410 Gone":
+                        # Support deleted webmention in line with the spec
+                        cursor.execute("DELETE FROM webmentions WHERE source = ?;", (source, ))
+
+                        continue
+
             if check_source_size.status_code != 200:
                 contents = "Webmention target is invalid."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
@@ -172,6 +193,30 @@ def validate_webmentions():
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
                 continue
+            
+            # use vouch to flag webmentions for moderation
+            # see Vouch spec for more: https://indieweb.org/Vouch
+            if vouch and vouch != "":
+                vouch_domain = vouch.split("/")[2]
+
+                if vouch_domain.endswith("jamesg.blog"):
+                    moderate = False
+
+                if moderate == True:
+                    with open("approved_list.txt", "r") as f:
+                        approved_list = f.read().splitlines()
+
+                    if vouch in approved_list:
+                        r = requests.get(vouch)
+
+                        soup = BeautifulSoup(r.text, "lxml")
+
+                        # find hyperlink with source
+                        # required for a vouch to be valid
+                        for a in soup.find_all("a"):
+                            if a.get("href"):
+                                if a["href"] == source:
+                                    moderate = False
 
             parse = mf2py.Parser(url=source)
             
@@ -239,7 +284,7 @@ def validate_webmentions():
             else:
                 content_html = None
 
-            cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", source, target, ))
+            cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ?, approved_to_show = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", source, target, moderate ))
             
             connection.commit()
 
