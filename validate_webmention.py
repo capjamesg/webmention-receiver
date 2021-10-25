@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from .config import RSS_DIRECTORY
 import send_function
 import sqlite3
 import mf2py
@@ -7,9 +8,8 @@ import string
 import random
 import requests
 import datetime
-# from create_rss_feed import generate_feed
+from create_rss_feed import generate_feed
 import emoji
-import json
 
 ROOT_DIRECTORY = "/home/capjamesg/"
 
@@ -35,7 +35,10 @@ def process_pending_webmention(item, cursor):
 
     last_url_sent = cursor.execute("SELECT feed_url, last_url_sent FROM webhooks WHERE feed_url = ?;", (feed_url, )).fetchone()
 
-    parsed = mf2py.Parser(url=feed_url).to_dict()
+    try:
+        parsed = mf2py.Parser(url=feed_url).to_dict()
+    except:
+        return
 
     # find h_feed item
     h_feed = [item["children"] for item in parsed['items'] if item['type'] == ['h-feed'] or item['type'] == "h-feed"]
@@ -79,6 +82,12 @@ def process_pending_webmention(item, cursor):
                     links = list(set(links))
 
                     for url in links:
+                        # if item in db, don't add again
+                        in_db = cursor.execute("SELECT * FROM webmentions WHERE source = ? and target = ?", (entry['properties']['url'][0], url)).fetchone()
+
+                        if in_db:
+                            continue
+
                         _, item = send_function.send_function(entry['properties']['url'][0], url)
 
                         if item == None:
@@ -203,10 +212,10 @@ def validate_webmentions():
                     moderate = False
 
                 if moderate == True:
-                    with open("approved_list.txt", "r") as f:
+                    with open(RSS_DIRECTORY.strip("/") + "/approved_list.txt", "r") as f:
                         approved_list = f.read().splitlines()
 
-                    if vouch in approved_list:
+                    if vouch_domain in approved_list:
                         r = requests.get(vouch)
 
                         soup = BeautifulSoup(r.text, "lxml")
