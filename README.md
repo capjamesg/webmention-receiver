@@ -25,9 +25,26 @@ Here are the endpoints supported by this project:
 
 [webmention.rocks](https://webmention.rocks/) is being used to test compliance with the webmention specification for receiving and sending webmentions.
 
+## Vouch Support
+
+This project is capable of sending and processing [Vouch](https://indieweb.org/Vouch) Webmentions as per the Vouch specification. The Vouch specification was designed to help prevent against spam. Vouch lets a sender specify a URL owned by a third party that will "vouch" for them. The webmention reciever checks if the "Vouch" domain is on an approved list. If the receiver trusts the vouch domain, the receiver will then go on to make sure that the specified URL links to their site. If the vouch link contains a hyperlink to the sender's URL, the specification states you can trust the webmention. Otherwise, the webmention is flagged as "needs approval".
+
+Please refer to the IndieWeb wiki [Vouch](https://indieweb.org/Vouch) page for more information on how to send and receive a Vouch.
+
+To configure Vouch, you will need to add all of the domains you trust to the `approved_domains.txt` file. These are domains from whom you will accept a vouch so long as the "vouch" URL the sender specifies links to your blog. This file should be placed in the same folder as your RSS_DIRECTORY environment variable.
+
+The `approved_domains.txt` file should contain one domain per line, such as:
+
+    indieweb.org
+    spec.indieweb.org
+
+Protocols should not be included in your approved domains list.
+
+To send a Vouch webmention, you can specify an optional "Vouch" URL when you go to send a webmention. If one is not specified, a vouch is not sent with your webmention. Please note that not all webmention receivers will accept a vouch. Vouch is a separate specification. The Webmention spec does not require a receiver to implement Vouch support to be compliant with the spec.
+
 ## Sender Discovery Compliance
 
-So far, this repository has passed tests in the "sender discovery" category.
+This repository has passed tests in the "sender discovery" category.
 
 - https://webmention.rocks/test/1
 - https://webmention.rocks/test/2
