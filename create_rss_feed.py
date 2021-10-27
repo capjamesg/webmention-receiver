@@ -1,5 +1,5 @@
 from feedgen.feed import FeedGenerator
-from dateutil import parse
+import dateutil
 import sqlite3
 
 fg = FeedGenerator()
@@ -8,18 +8,19 @@ def generate_feed():
     fg.id("https://webmention.jamesg.blog")
     fg.title("James' Webmention Receiver Feed")
     fg.author(name="James' Webmention Receiver")
+    fg.link(href="https://webmention.jamesg.blog", rel="self")
     fg.logo("https://webmention.jamesg.blog/static/favicon.ico")
     fg.subtitle("James' Webmention Receiver Feed")
     fg.description("Webmentions sent to webmention.jamesg.blog")
     fg.language("en")
 
-    connection = sqlite3.connect("/home/capjamesg/webmention_receiver/webmentions.db")
+    connection = sqlite3.connect("/home/capjamesg/webmentions.db")
 
     with connection:
         cursor = connection.cursor()
         # Create RSS feed for all webmentions
         # Exclude Bridgy webmentions as I may receive a lot of them
-        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE source NOT LIKE 'https://brid.gy/%' AND status = 'valid' ORDER BY received_date ASC LIMIT 10;").fetchall()
+        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE source NOT LIKE 'https://brid.gy/%' AND status = 'valid' ORDER BY received_date DESC LIMIT 10;").fetchall()
         for webmention in webmentions:
 
             if webmention[4] == "like-of":
@@ -40,12 +41,12 @@ def generate_feed():
                 fe.title(webmention[0])
 
             try:
-                date = parse(webmention[2])
+                date = dateutil.parser.parse(webmention[2])
 
                 timestamp = date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
                 fe.pubDate(timestamp)
             except:
-                continue
+                pass
 
             fe.link(href=webmention[0])
 
@@ -54,7 +55,7 @@ def generate_feed():
             else:
                 if webmention[5]:
                     # parse date
-                    date = parse(webmention[2])
+                    date = dateutil.parser.parse(webmention[2])
 
                     # show date as day date month year
                     date = date.strftime("%A %-d %M, %Y")
@@ -71,4 +72,5 @@ def generate_feed():
 
     print("created webmentions.xml RSS feed")
 
-generate_feed()
+if __name__ == "__main__":
+    generate_feed()

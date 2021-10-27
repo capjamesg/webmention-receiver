@@ -1,5 +1,4 @@
 from bs4 import BeautifulSoup
-from .config import RSS_DIRECTORY
 import send_function
 import sqlite3
 import mf2py
@@ -212,10 +211,12 @@ def validate_webmentions():
                     moderate = False
 
                 if moderate == True:
-                    with open(RSS_DIRECTORY.strip("/") + "/approved_list.txt", "r") as f:
-                        approved_list = f.read().splitlines()
+                    vouch_list = cursor.execute("SELECT domain FROM vouch WHERE vouch_domain = ?", (vouch_domain, )).fetchall()
 
-                    if vouch_domain in approved_list:
+                    # only get domains
+                    vouch_list = [v[0] for v in vouch_list]
+
+                    if vouch_domain in vouch_list:
                         r = requests.get(vouch)
 
                         soup = BeautifulSoup(r.text, "lxml")
@@ -293,7 +294,7 @@ def validate_webmentions():
             else:
                 content_html = None
 
-            cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ?, approved_to_show = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", source, target, moderate ))
+            cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ?, approved_to_show = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", moderate, source, target ))
             
             connection.commit()
 
@@ -303,4 +304,4 @@ def validate_webmentions():
 
 validate_webmentions()
 
-# generate_feed()
+generate_feed()

@@ -51,4 +51,9 @@ def create_tables():
             last_url_sent text);
         """)
 
+        cursor.execute("""CREATE TABLE vouch (
+            domain text,
+            added_date text);
+        """)
+
     print("created database tables")

@@ -105,4 +105,4 @@ def discover_auth_endpoint():
 
 @auth.route("/login", methods=["GET", "POST"])
 def login():
-    return render_template("auth.html", title="Webmention Dashboard Login")
+    return render_template("user/auth.html", title="Webmention Dashboard Login")
