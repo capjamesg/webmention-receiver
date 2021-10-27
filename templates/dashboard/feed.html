@@ -22,7 +22,7 @@
             {% elif w[4] == "bookmark-of" %}
             {% set post_type = "🔖 Bookmark" %}
             {% else %}
-            {% set post_type = "💬 Webmention" %}
+            {% set post_type = "💬 Reply" %}
             {% endif %}
         {% if w[3] %}
         <p>{{ " ".join(w[3].split(" ")[:75]) }} {% if w[3].split(" ") | length > 75 %}... <a href="{{ w[0] }}">Read more</a>{% endif %}</p>

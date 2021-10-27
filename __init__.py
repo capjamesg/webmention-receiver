@@ -1,8 +1,6 @@
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from .config import SECRET_KEY
 import dateutil.parser
 import os
@@ -15,12 +13,6 @@ def create_app():
 
     # read config.py file
     app.config.from_pyfile(os.path.join(".", "config.py"), silent=False)
-
-    # Limiter(
-    #     app,
-    #     key_func=get_remote_address,
-    #     default_limits=["200 per day", "50 per hour"]
-    # )
 
     db.init_app(app)
 
@@ -63,6 +55,10 @@ def create_app():
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("404.html", title="Page not found", error=404), 404
+
+    @app.errorhandler(500)
+    def server_error(e):
+        return render_template("500.html", title="Server error", error=500), 500
 
     @app.errorhandler(405)
     def method_not_allowed(e):

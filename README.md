@@ -31,14 +31,9 @@ This project is capable of sending and processing [Vouch](https://indieweb.org/V
 
 Please refer to the IndieWeb wiki [Vouch](https://indieweb.org/Vouch) page for more information on how to send and receive a Vouch.
 
-To configure Vouch, you will need to add all of the domains you trust to the `approved_domains.txt` file. These are domains from whom you will accept a vouch so long as the "vouch" URL the sender specifies links to your blog. This file should be placed in the same folder as your RSS_DIRECTORY environment variable.
+To configure Vouch, you will need to add all of the domains you trust to the your vouch list on the /vouch web page. These are domains from whom you will accept a vouch so long as the "vouch" URL the sender specifies links to your blog.
 
-The `approved_domains.txt` file should contain one domain per line, such as:
-
-    indieweb.org
-    spec.indieweb.org
-
-Protocols should not be included in your approved domains list.
+### Sending a webmention with vouch
 
 To send a Vouch webmention, you can specify an optional "Vouch" URL when you go to send a webmention. If one is not specified, a vouch is not sent with your webmention. Please note that not all webmention receivers will accept a vouch. Vouch is a separate specification. The Webmention spec does not require a receiver to implement Vouch support to be compliant with the spec.
 

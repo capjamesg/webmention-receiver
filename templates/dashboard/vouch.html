@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for message in messages %}
+    <p class="notification">{{ message }}</p>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<section class="main_content_box">
+    <h1>Vouch settings</h1>
+    <p>See the domains for which you have vouched and edit your existing vouches.</p>
+    <h2>What is a vouch?</h2>
+    <p>A vouch is a URL that links to your site. You can use a vouch to show that the site to which you are sending your webmention should trust your webmention is not spam.</p>
+    <p>For a vouch to be used, the vouch URL you specify must appear in a list of approved domains maintained by the webmention receiver.</p>
+    <p>If you do not specify a vouch URL (or the site to which your webmention is being sent does not support vouch), your webmention may be flagged for moderation before being published.</p>
+    <h2>Your Vouches</h2>
+    {% if vouches | length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Date Added</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vouches %}
+                    <tr>
+                        <td><a href="{{ v[0] }}">{{ v[0] }}</a></td>
+                        <td>{{ v[1] }}</td>
+                        <td><form action="/vouch/delete" method="POST"><input type="hidden" name="domain" value="{{ v[0] }}"><input type="submit" value="Delete" /></form></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>You have not added any domains to your vouch list yet.</p>
+    {% endif %}
+    <h2>Create a Vouch</h2>
+    <form action="/vouch" method="POST" class="send_webmention_form">
+        <label for="source">Domain you want to add to your vouch list:</label><br>
+        <input type="url" name="domain" id="domain" placeholder="https://jamesg.blog" required/><br>
+        <input type="submit" value="Add Domain to Vouch List">
+    </form>
+</section>
+{% endblock %}

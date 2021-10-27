@@ -343,3 +343,10 @@ ol {
 .send_webmention_form input[type="submit"] {
 	text-align: center;
 }
+input {
+	box-sizing: border-box;
+}
+table {
+	width: 100%;
+	text-align: left;
+}

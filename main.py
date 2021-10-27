@@ -54,7 +54,7 @@ def homepage():
         count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
         webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,) ).fetchall()
 
-    return render_template("feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
+    return render_template("dashboard/feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
 
 @main.route("/endpoint", methods=["POST"])
 def receiver():
@@ -169,7 +169,7 @@ def view_sent_webmentions_page():
         
         webmentions = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint, location_header FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
 
-    return render_template("sent.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
+    return render_template("dashboard/sent.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
 
 @main.route("/sent/<wm>")
 @requires_indieauth
@@ -203,7 +203,7 @@ def view_sent_webmention(wm):
             final_parsed_response = parsed_response
         
         if webmention:
-            return render_template("webmention.html", webmention=webmention, title="Webmention to {} Details".format(webmention[1]), \
+            return render_template("dashboard/webmention.html", webmention=webmention, title="Webmention to {} Details".format(webmention[1]), \
                 response=final_parsed_response)
         else:
             return abort(404)
@@ -339,7 +339,7 @@ def stats_page():
 
         pending_webmention_count = cursor.execute("SELECT count(*) FROM webmentions WHERE status = 'validating';").fetchone()[0]
 
-        return render_template("stats.html", received_count=get_webmentions, sent_count=get_sent_webmentions, received_types=received_types, pending_webmention_count=pending_webmention_count)
+        return render_template("user/stats.html", received_count=get_webmentions, sent_count=get_sent_webmentions, received_types=received_types, pending_webmention_count=pending_webmention_count)
 
 @main.route("/rss")
 def rss():
@@ -355,6 +355,69 @@ def rss():
         return jsonify({"message": "You must be authenticated to retrieve all webmentions."}), 403
     
     return send_from_directory(RSS_DIRECTORY + "/static/", "webmentions.xml")
+
+@main.route("/vouch", methods=["GET", "POST"])
+def see_vouch_list():
+    if not session.get("me"):
+        return jsonify({"message": "You must be authenticated to use this resource."}), 403
+
+    if request.method == "POST":
+        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+        cursor = connection.cursor()
+
+        with connection:
+            domain = request.form.get("domain")
+
+            date_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            if not domain:
+                flash("You must provide a domain to vouch for.")
+                return redirect("/vouch")
+
+            domain = domain.split("/")[2]
+
+            check_if_vouched = cursor.execute("SELECT * FROM vouch WHERE domain = ?", (domain, )).fetchone()
+
+            if check_if_vouched:
+                flash("The domain you specified is already in your vouch list.")
+                return redirect("/vouch")
+
+            cursor.execute("INSERT INTO vouch VALUES (?, ?);", (domain, date_now, ))
+
+        flash("Vouch added to list.")
+
+        return redirect("/vouch")
+
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+    with connection:
+        cursor = connection.cursor()
+        
+        get_vouch_list = cursor.execute("SELECT * FROM vouch;").fetchall()
+
+    return render_template("dashboard/vouch.html", vouches=get_vouch_list, title="Vouch List | Webmention Dashboard")
+
+@main.route("/vouch/delete", methods=["POST"])
+def delete_vouch():
+    if not session.get("me"):
+        return jsonify({"message": "You must be authenticated to use this resource."}), 403
+
+    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+    with connection:
+        cursor = connection.cursor()
+
+        domain = request.form.get("domain")
+
+        if not domain:
+            flash("You must provide a vouch domain to delete.")
+            return redirect("/vouch")
+
+        cursor.execute("DELETE FROM vouch WHERE domain = ?", (domain, ))
+
+    flash("Vouch deleted.")
+    return redirect("/vouch")
 
 @main.route("/static/images/<path:filename>")
 def send_images(filename):

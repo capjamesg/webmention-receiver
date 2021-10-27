@@ -2,7 +2,7 @@ from flask import request, jsonify, render_template, redirect, flash, Blueprint,
 from bs4 import BeautifulSoup
 from .config import ROOT_DIRECTORY
 from .indieauth import requires_indieauth
-import send_function
+from .send_function import *
 import requests
 import sqlite3
 
@@ -105,7 +105,7 @@ def send_webmention():
         
         return redirect("/sent/{}".format(id))
 
-    return render_template("send_webmention.html", title="Send a Webmention")
+    return render_template("dashboard/send_webmention.html", title="Send a Webmention")
 
 @send.route("/send/open", methods=["POST"])
 def send_webmention_anyone():
