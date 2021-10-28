@@ -1,6 +1,6 @@
 from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
 from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP
-from .indieauth import requires_indieauth
+from .auth.indieauth import requires_indieauth
 import requests
 import datetime
 import sqlite3
@@ -243,6 +243,7 @@ def retrieve_sent_webmentions_json():
 def retrieve_webmentions():
     target = request.args.get("target")
     property = request.args.get("property")
+    since = request.args.get("since")
     key = request.args.get("key")
 
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
@@ -263,6 +264,10 @@ def retrieve_webmentions():
         where_clause = "WHERE target = ? and property = ? AND status = 'valid'"
         attributes = (target, property, )
 
+    if since:
+        where_clause = where_clause + " AND sent_date > ?"
+        attributes = attributes + (since, )
+
     get_key = cursor.execute("SELECT api_key FROM user WHERE api_key = ?", (key, )).fetchone()
 
     if not get_key and session.get("me") and where_clause == "":
@@ -274,7 +279,7 @@ def retrieve_webmentions():
 
         count = cursor.execute("SELECT COUNT(source), property FROM webmentions GROUP BY property;").fetchall()
     else:
-        get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date ASC;".format(where_clause), attributes, )
+        get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date DESC;".format(where_clause), attributes, )
         result = change_to_json(get_webmentions)
 
         count = cursor.execute("SELECT COUNT(source), property FROM webmentions {} GROUP BY property;".format(where_clause), attributes, ).fetchall()
