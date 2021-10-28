@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-import send_function
+from .send import send_function
 import sqlite3
 import mf2py
 import mf2util
@@ -297,6 +297,20 @@ def validate_webmentions():
             cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ?, approved_to_show = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", moderate, source, target ))
             
             connection.commit()
+
+            # send notification to bot
+            BOT_TOKEN = "0p;ak.d.ajdkm90dasda;s"
+            IRC_WEBHOOK_HEADERS = {
+                "Content-Type": "application/json",
+                "Authentication": "Bearer " + BOT_TOKEN
+            }
+
+            intro_message_to_send = "[wm_receiver] You have received a webmention from {} to {}.".format(source, target)
+
+            message_contents = "[wm_receiver] Content: {}".format(parsed_h_entry["content"])
+
+            requests.post("https://irc.jamesg.blog/webhook", data={"source": intro_message_to_send}, headers=IRC_WEBHOOK_HEADERS)
+            requests.post("https://irc.jamesg.blog/webhook", data={"source": message_contents}, headers=IRC_WEBHOOK_HEADERS)
 
             print("done with {}".format(source))
 
