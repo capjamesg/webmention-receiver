@@ -299,18 +299,6 @@ def validate_webmentions():
             connection.commit()
 
             # send notification to bot
-            BOT_TOKEN = "0p;ak.d.ajdkm90dasda;s"
-            IRC_WEBHOOK_HEADERS = {
-                "Content-Type": "application/json",
-                "Authentication": "Bearer " + BOT_TOKEN
-            }
-
-            intro_message_to_send = "[wm_receiver] You have received a webmention from {} to {}.".format(source, target)
-
-            message_contents = "[wm_receiver] Content: {}".format(parsed_h_entry["content"])
-
-            requests.post("https://irc.jamesg.blog/webhook", data={"source": intro_message_to_send}, headers=IRC_WEBHOOK_HEADERS)
-            requests.post("https://irc.jamesg.blog/webhook", data={"source": message_contents}, headers=IRC_WEBHOOK_HEADERS)
 
             print("done with {}".format(source))
 
