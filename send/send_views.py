@@ -100,7 +100,19 @@ def send_webmention():
 
         with connection:
             cursor = connection.cursor()
-            cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header, vouch, approved_to_show) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item) )
+            cursor.execute("""
+                INSERT INTO sent_webmentions (
+                    source,
+                    target,
+                    sent_date,
+                    status_code,
+                    response,
+                    webmention_endpoint,
+                    location_header,
+                    vouch,
+                    approved_to_show
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)"""
+            , tuple(item) )
             id = cursor.lastrowid
         
         return redirect("/sent/{}".format(id))
@@ -207,7 +219,9 @@ def send_webmention_anyone():
                 endpoint = "https://" + target.split("/")[2] + endpoint
         
         # make post request to endpoint with source and target as values
-        r = requests.post(endpoint, data={"source": source, "target": target}, headers={"Content-Type": "application/x-www-form-urlencoded"})
+        r = requests.post(endpoint, 
+            data={"source": source, "target": target},
+            headers={"Content-Type": "application/x-www-form-urlencoded"})
 
         message = str(r.json()["message"])
 
