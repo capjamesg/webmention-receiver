@@ -1,14 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
+<section class="main_content_box">
 {% if get_flashed_messages()[0] == "success" %}
-<h1>Your webmention was successfully sent to {{ webmention[2].split("//")[1] }}</h1>
-{% else %}
-<h1>Webmention to {{ webmention[2].split("//")[1] }}</h1>
-{% endif %}
-<p>Target: <a href="{{ webmention[2] }}">{{ webmention[2] }}</a></p>
-<p>Source: <a href="{{ webmention[1] }}">{{ webmention[1] }}</a></p>
-<p>Sent: {{ webmention[3] | convert_time }}</p>
-<p>Status: {{ webmention[4] }}</p>
-<p>Message:</p>
-{{ response }}
+    <h1>Your webmention was successfully sent to {{ webmention[2].split("//")[1] }}</h1>
+    {% else %}
+    <h1>Webmention to {{ webmention[2].split("//")[1] }}</h1>
+    {% endif %}
+    <p>Target: <a href="{{ webmention[2] }}">{{ webmention[2] }}</a></p>
+    <p>Source: <a href="{{ webmention[1] }}">{{ webmention[1] }}</a></p>
+    <p>Sent: {{ webmention[3] | convert_time }}</p>
+    <p>Status: {{ webmention[4] }}</p>
+    <p>Message:</p>
+    {{ response }}
+</section>
 {% endblock %}
