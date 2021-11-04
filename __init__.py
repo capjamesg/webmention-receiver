@@ -58,7 +58,7 @@ def create_app():
 
     @app.errorhandler(500)
     def server_error(e):
-        return render_template("500.html", title="Server error", error=500), 500
+        return render_template("404.html", title="Server error", error=500), 500
 
     @app.errorhandler(405)
     def method_not_allowed(e):
