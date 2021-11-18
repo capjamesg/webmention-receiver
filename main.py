@@ -127,6 +127,39 @@ def delete_webmention():
     else:
         return abort(405)
 
+@main.route("/approve", methods=["POST"])
+@requires_indieauth
+def approve_webmention():
+    if request.method == "POST":
+        target = request.form.get("target")
+        source = request.form.get("source")
+        status = request.form.get("status")
+
+        if not target and not source or status:
+            flash("Please provide a target,a source, and a status.")
+            return redirect("/")
+
+        if status != "hide" and status != "show":
+            flash("Status must be either hide or show.")
+            return redirect("/")
+        
+        if status == "hide":
+            show_value = 0
+        else:
+            show_value = 1
+
+        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+        with connection:
+            cursor = connection.cursor()
+
+            cursor.execute("UPDATE webmentions SET approved_to_show = ? WHERE target = ? AND source = ?", (show_value, target, source))
+
+        flash("Webmention from {} has been approved.".format(target))
+        return redirect("/")
+    else:
+        return abort(405)
+
 @main.route("/sent")
 @requires_indieauth
 def view_sent_webmentions_page():
@@ -333,6 +366,7 @@ def webhook_check():
 @requires_indieauth
 def stats_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
     with connection:
         cursor = connection.cursor()
 
@@ -344,7 +378,22 @@ def stats_page():
 
         pending_webmention_count = cursor.execute("SELECT count(*) FROM webmentions WHERE status = 'validating';").fetchone()[0]
 
-        return render_template("user/stats.html", received_count=get_webmentions, sent_count=get_sent_webmentions, received_types=received_types, pending_webmention_count=pending_webmention_count)
+        moderation_webmention_count = cursor.execute("SELECT count(*) FROM webmentions WHERE approved_to_show = 0;").fetchone()[0]
+
+        received_months = cursor.execute("SELECT strftime('%Y-%m', received_date) AS month, count(*) FROM webmentions WHERE status = 'valid' GROUP BY month;").fetchall()
+
+        received_years = cursor.execute("SELECT strftime('%Y', received_date) AS year, count(*) FROM webmentions WHERE status = 'valid' GROUP BY year;").fetchall()
+
+        return render_template("user/stats.html",
+            title="Webmention Statistics",
+            received_count=get_webmentions,
+            sent_count=get_sent_webmentions,
+            received_types=received_types,
+            pending_webmention_count=pending_webmention_count,
+            moderation_webmention_count=moderation_webmention_count,
+            received_months=received_months,
+            received_years=received_years
+        )
 
 @main.route("/rss")
 def rss():
