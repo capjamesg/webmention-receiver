@@ -38,6 +38,22 @@
             <input type="hidden" name="target" value="{{ w[1] }}">
             <input type="submit" value="Delete">
           </form>
+          {% if w[7] == 0 %}
+            <p>This webmention is currently hidden.</p>
+            <form action="/approve" method="POST">
+              <input type="hidden" name="source" value="{{ w[0] }}">
+              <input type="hidden" name="target" value="{{ w[1] }}">
+              <input type="hidden" name="status" value="show">
+              <input type="submit" value="Show on Site">
+            </form>
+          {% else %}
+            <form action="/approve" method="POST">
+              <input type="hidden" name="source" value="{{ w[0] }}">
+              <input type="hidden" name="target" value="{{ w[1] }}">
+              <input type="hidden" name="status" value="hide">
+              <input type="submit" value="Hide from Site">
+            </form>
+          {% endif %}
         </li>
       {% endfor %}
     </ul>
