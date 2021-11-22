@@ -10,6 +10,82 @@ To use this project, you will need to replace all mentions of "jamesg.blog" with
 
 ![Microsub channel list](screenshot.png)
 
+## API Endpoints
+
+The webmention receiver comes with a few API endpoints that may be useful.
+
+### Send a Webmention
+
+The following endpoint lets you send a webmention via API. This endpoint is open to anyone, including visitors who are not authenticated with your endpoint. You may want to use this endpoint to let people submit webmentions from a form on your website.
+
+    POST /send/open
+
+    {
+        "source": "https://jamesg.blog/webmention.html",
+        "target": "https://jamesg.blog/post.html",
+    }
+
+This endpoint will return a 201 wstatus code if the webmention was successfully sent.
+
+### Discover a Webmention Endpoint
+
+You can use the /discover endpoint to find the webmention endpoint associated with a site, if one is specified.
+
+    POST /discover
+
+    {
+        "target": "https://jamesg.blog"
+    }
+
+This endpoint will return a response like:
+
+    {"success": True, "endpoint": "https://webmention.jamesg.blog/webmention"}
+
+### Get Webmentions for a Page
+
+You can retrieve webmentions for a specific page using the API. Here is the request you need to make, where URL is the URL of the page for which you want to retrieve webmentions:
+
+    GET /received?target=URL
+
+This endpoint will return an object like this:
+
+    {
+        "count": 1,
+        "count_by_property": {
+            "like-of": 1,
+        },
+        "webmentions": [
+            {
+                "approved_to_show": 1,
+                "author_name": "Ryan Barrett",
+                "author_photo": "https://webmention.jamesg.blog/static/images/ycaoqndg.jpeg",
+                "author_url": "https://snarfed.org/",
+                "content_html": "likes <a class=\"u-like u-like-of\" href=\"https://jamesg.blog/2021/11/16/i-love-my-website\">I love my website | James’ Coffee Blog</a>",
+                "contents": "likes I love my website | James’ Coffee Blog",
+                "property": "like-of",
+                "received_date": "2021-11-16 14:31:50.407750",
+                "source": "https://snarfed.org/2021-11-16_i-love-my-website-james-coffee-blog",
+                "status": "valid",
+                "target": "https://jamesg.blog/2021/11/16/i-love-my-website",
+                "vouch": null
+            },
+        ]
+    }
+
+The "count" value tells you how many webmentions have been sent to a specific page. The webmention types that can appear in count_by_property are:
+
+- like-of
+- in-reply-to
+- bookmark-of
+- poke-of
+- repost-of
+
+By default, this endpoint only returns webmentions that have been approved to show.
+
+Webmentions are approved to show by default. However, you can hide a webmention in the admin dashboard. This may be useful for spam prevention.
+
+You can also delete a webmention from the admin dashboard. Deleting a webmention means it will be removed from the database.
+
 ## Endpoints
 
 Here are the endpoints supported by this project:

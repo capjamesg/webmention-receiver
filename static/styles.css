@@ -350,3 +350,8 @@ table {
 	width: 100%;
 	text-align: left;
 }
+.feed form {
+    display: inline-block;
+    padding-left: 15px;
+	float: left;
+}
