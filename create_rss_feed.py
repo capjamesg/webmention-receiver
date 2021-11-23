@@ -20,9 +20,18 @@ def generate_feed():
         cursor = connection.cursor()
         # Create RSS feed for all webmentions
         # Exclude Bridgy webmentions as I may receive a lot of them
-        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE source NOT LIKE 'https://brid.gy/%' AND status = 'valid' ORDER BY received_date DESC LIMIT 10;").fetchall()
-        for webmention in webmentions:
+        webmentions = cursor.execute("""SELECT
+            source,
+            target,
+            received_date,
+            contents,
+            property,
+            author_name
+            FROM webmentions
+            WHERE source NOT LIKE 'https://brid.gy/%' AND status = 'valid'
+            ORDER BY received_date DESC LIMIT 10;""").fetchall()
 
+        for webmention in webmentions:
             if webmention[4] == "like-of":
                 post_type = "❤️ Like"
             elif webmention[4] == "mention-of":
