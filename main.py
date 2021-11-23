@@ -579,7 +579,7 @@ def delete_vouch():
 
 @main.route("/static/images/<path:filename>")
 def send_images(filename):
-    return send_from_directory(ROOT_DIRECTORY + "/webmention_receiver/static/images/", filename)
+    return send_from_directory(main.static_folder.strip("/") + "/images/", filename)
 
 @main.route("/robots.txt")
 def robots():
@@ -588,10 +588,6 @@ def robots():
 @main.route("/favicon.ico")
 def favicon():
     return send_from_directory(main.static_folder, "favicon.ico")
-
-@main.route("/static/images/<image:image>")
-def send_image(image):
-    return send_from_directory(main.static_folder.strip("/") + "/images/", image)
 
 @main.route("/setup")
 def setup_page():
