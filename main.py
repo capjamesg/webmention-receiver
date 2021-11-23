@@ -22,7 +22,9 @@ def index():
     if session.get("me"):
         return redirect("/home")
 
-    return render_template("index.html", title="{} Webmention Receiver Home".format(current_app.config["ME"].strip().replace("https://", "").replace("http://", "")))
+    return render_template("index.html",
+        title="{} Webmention Receiver Home".format(current_app.config["ME"].strip().replace("https://", "").replace("http://", ""))
+    )
 
 @main.route("/home")
 def homepage():
@@ -52,9 +54,28 @@ def homepage():
 
     with connection:
         count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-        webmentions = cursor.execute("SELECT source, target, received_date, contents, property, author_name FROM webmentions WHERE status = 'valid' ORDER BY received_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,) ).fetchall()
+        webmentions = cursor.execute("""
+            SELECT source,
+                target,
+                received_date,
+                contents,
+                property,
+                author_name
+            FROM webmentions
+            WHERE status = 'valid'
+            ORDER BY received_date {}
+            LIMIT 10 OFFSET ?;""".format(sort_order), (offset,) ).fetchall()
 
-    return render_template("dashboard/feed.html", webmentions=webmentions, sent=False, received_count=count, page=int(page), page_count=math.ceil(int(count) / 10), base_results_query="/", title="Received Webmentions", sort=sort_param)
+    return render_template("dashboard/feed.html",
+        webmentions=webmentions,
+        sent=False,
+        received_count=count,
+        page=int(page),
+        page_count=math.ceil(int(count) / 10),
+        base_results_query="/",
+        title="Received Webmentions",
+        sort=sort_param
+    )
 
 @main.route("/endpoint", methods=["POST"])
 def receiver():
@@ -67,7 +88,8 @@ def receiver():
     source = request.form.get("source")
     target = request.form.get("target")
 
-    if not (source.startswith("http://") or source.startswith("https://")) and (target.startswith("http://") or target.startswith("https://")):
+    if not (source.startswith("http://") or source.startswith("https://")) \
+        and (target.startswith("http://") or target.startswith("https://")):
         return jsonify({"message": "Source and target must use http:// or https:// protocols."}), 400
 
     if source == target:
@@ -96,11 +118,28 @@ def receiver():
         already_sent_from_source = cursor.execute("SELECT source, target FROM webmentions WHERE source = ?", (target, )).fetchall()
 
         for a in already_sent_from_source:
-            cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (a[0], a[1], str(datetime.datetime.now()), "validating", "", "", ))
+            cursor.execute("""INSERT INTO webmentions (
+                source,
+                target,
+                received_date,
+                status, contents
+                property
+                ) VALUES (?, ?, ?, ?, ?, ?)""",
+                (a[0], a[1], str(datetime.datetime.now()), "validating", "", "", )
+            )
 
         cursor.execute("DELETE FROM webmentions WHERE source = ? and target = ?", (source, target, ))
         
-        cursor.execute("INSERT INTO webmentions (source, target, received_date, status, contents, property) VALUES (?, ?, ?, ?, ?, ?)", (source, target, str(datetime.datetime.now()), "validating", "", "", ))
+        cursor.execute("""INSERT INTO webmentions (
+            source,
+            target,
+            received_date,
+            status,
+            contents,
+            property
+            ) VALUES (?, ?, ?, ?, ?, ?)""",
+            (source, target, str(datetime.datetime.now()), "validating", "", "", )
+        )
 
         return jsonify({"message": "Accepted."}), 202
 
@@ -153,7 +192,12 @@ def approve_webmention():
         with connection:
             cursor = connection.cursor()
 
-            cursor.execute("UPDATE webmentions SET approved_to_show = ? WHERE target = ? AND source = ?", (show_value, target, source))
+            cursor.execute("""
+                UPDATE webmentions
+                SET approved_to_show = ?
+                WHERE target = ? AND source = ?""",
+                (show_value, target, source)
+            )
 
         flash("Webmention from {} has been approved.".format(target))
         return redirect("/")
@@ -185,7 +229,18 @@ def view_sent_webmentions_page():
         cursor = connection.cursor()
 
         count = cursor.execute("SELECT COUNT(id) FROM sent_webmentions").fetchone()[0]
-        to_process = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint, location_header FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
+        to_process = cursor.execute("""SELECT id,
+            source,
+            target,
+            sent_date,
+            status_code,
+            response,
+            webmention_endpoint,
+            location_header
+            FROM sent_webmentions
+            ORDER BY sent_date {}
+            LIMIT 10 OFFSET ?;""".format(sort_order), (offset,)
+        ).fetchall()
 
         for c in to_process:
             if c[7] and c[7] != "" and c[7] != None:
@@ -195,14 +250,42 @@ def view_sent_webmentions_page():
                 else:
                     text = "Error: {}, {}".format(r.status_code, r.text)
 
-                cursor.execute("UPDATE sent_webmentions SET response = ?, location_header = ? WHERE source = ? AND target = ?", (text, "", c[1], c[2], ))
+                cursor.execute("""
+                    UPDATE sent_webmentions
+                    SET response = ?
+                    AND location_header = ?
+                    WHERE source = ?
+                    AND target = ?""",
+                    (text, "", c[1], c[2], )
+                )
 
     with connection:
         cursor = connection.cursor()
-        
-        webmentions = cursor.execute("SELECT id, source, target, sent_date, status_code, response, webmention_endpoint, location_header FROM sent_webmentions ORDER BY sent_date {} LIMIT 10 OFFSET ?;".format(sort_order), (offset,)).fetchall()
 
-    return render_template("dashboard/sent.html", webmentions=webmentions, sent=True, page=int(page), page_count=int(int(count) / 10), base_results_query="/sent", title="Your Sent Webmentions", sort=sort_param, count=count)
+        webmentions = cursor.execute("""SELECT id,
+            source,
+            target,
+            sent_date,
+            status_code,
+            response,
+            webmention_endpoint,
+            location_header
+            FROM sent_webmentions
+            ORDER BY sent_date {}
+            LIMIT 10 OFFSET ?;""".format(sort_order), (offset,)
+        ).fetchall()
+
+    return render_template(
+        "dashboard/sent.html",
+        webmentions=webmentions,
+        sent=True,
+        page=int(page),
+        page_count=int(int(count) / 10),
+        base_results_query="/sent",
+        title="Your Sent Webmentions",
+        sort=sort_param,
+        count=count
+    )
 
 @main.route("/sent/<wm>")
 @requires_indieauth
@@ -224,7 +307,14 @@ def view_sent_webmention(wm):
             else:
                 text = "Error: {}, {}".format(r.status_code, r.text)
 
-            cursor.execute("UPDATE sent_webmentions SET response = ? AND location_header = ? WHERE source = ? AND target = ?", (text, "", webmention[1], webmention[2], ))
+            cursor.execute("""
+                UPDATE sent_webmentions
+                SET response = ?
+                AND location_header = ?
+                WHERE source = ?
+                AND target = ?""",
+                (text, "", webmention[1], webmention[2], )
+            )
 
         webmention = cursor.execute("SELECT * FROM sent_webmentions WHERE id = ?", (wm,)).fetchone()
 
@@ -266,7 +356,17 @@ def retrieve_sent_webmentions_json():
         if not target:
             get_webmentions = cursor.execute("SELECT * FROM sent_webmentions;")
         else:
-            get_webmentions = cursor.execute("SELECT source, target, sent_date, status_code, response, webmention_endpoint FROM sent_webmentions WHERE target = ? {} ORDER BY sent_date ASC;".format(status), (target, )).fetchall()
+            get_webmentions = cursor.execute("""SELECT
+                source,
+                target,
+                sent_date,
+                status_code,
+                response,
+                webmention_endpoint
+                FROM sent_webmentions
+                WHERE target = ? {}
+                ORDER BY sent_date ASC;""".format(status), (target, )
+            ).fetchall()
 
         result = change_to_json(get_webmentions)
 
@@ -450,7 +550,11 @@ def see_vouch_list():
         
         get_vouch_list = cursor.execute("SELECT * FROM vouch;").fetchall()
 
-    return render_template("dashboard/vouch.html", vouches=get_vouch_list, title="Vouch List | Webmention Dashboard")
+    return render_template(
+        "dashboard/vouch.html",
+        vouches=get_vouch_list,
+        title="Vouch List | Webmention Dashboard"
+    )
 
 @main.route("/vouch/delete", methods=["POST"])
 def delete_vouch():
@@ -484,6 +588,10 @@ def robots():
 @main.route("/favicon.ico")
 def favicon():
     return send_from_directory(main.static_folder, "favicon.ico")
+
+@main.route("/static/images/<image:image>")
+def send_image(image):
+    return send_from_directory(main.static_folder.strip("/") + "/images/", image)
 
 @main.route("/setup")
 def setup_page():

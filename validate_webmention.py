@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from .send import send_function
+import post_type_discovery as post_type_discovery
 import sqlite3
 import mf2py
 import mf2util
@@ -9,6 +10,35 @@ import requests
 import datetime
 from create_rss_feed import generate_feed
 import emoji
+
+def process_vouch(vouch, cursor, source):
+    # use vouch to flag webmentions for moderation
+    # see Vouch spec for more: https://indieweb.org/Vouch
+    if vouch and vouch != "":
+        vouch_domain = vouch.split("/")[2]
+
+        if vouch_domain.endswith("jamesg.blog"):
+            moderate = False
+
+        if moderate == True:
+            vouch_list = cursor.execute("SELECT domain FROM vouch WHERE vouch_domain = ?", (vouch_domain, )).fetchall()
+
+            # only get domains
+            vouch_list = [v[0] for v in vouch_list]
+
+            if vouch_domain in vouch_list:
+                r = requests.get(vouch)
+
+                soup = BeautifulSoup(r.text, "lxml")
+
+                # find hyperlink with source
+                # required for a vouch to be valid
+                for a in soup.find_all("a"):
+                    if a.get("href"):
+                        if a["href"] == source:
+                            moderate = False
+
+    return moderate
 
 ROOT_DIRECTORY = "/home/capjamesg/"
 
@@ -202,49 +232,13 @@ def validate_webmentions():
 
                 continue
             
-            # use vouch to flag webmentions for moderation
-            # see Vouch spec for more: https://indieweb.org/Vouch
-            if vouch and vouch != "":
-                vouch_domain = vouch.split("/")[2]
-
-                if vouch_domain.endswith("jamesg.blog"):
-                    moderate = False
-
-                if moderate == True:
-                    vouch_list = cursor.execute("SELECT domain FROM vouch WHERE vouch_domain = ?", (vouch_domain, )).fetchall()
-
-                    # only get domains
-                    vouch_list = [v[0] for v in vouch_list]
-
-                    if vouch_domain in vouch_list:
-                        r = requests.get(vouch)
-
-                        soup = BeautifulSoup(r.text, "lxml")
-
-                        # find hyperlink with source
-                        # required for a vouch to be valid
-                        for a in soup.find_all("a"):
-                            if a.get("href"):
-                                if a["href"] == source:
-                                    moderate = False
+            moderate = process_vouch(vouch, cursor, source)
 
             parse = mf2py.Parser(url=source)
             
             parsed_h_entry = mf2util.interpret_comment(parse.to_dict(), source, target)
 
             post_type = "reply"
-
-            if parsed_h_entry.get("like-of") and parsed_h_entry.get("like-of"):
-                post_type = "like-of"
-
-            if parsed_h_entry.get("bookmark-of") and parsed_h_entry.get("bookmark-of"):
-                post_type = "bookmark-of"
-
-            if soup.select(".u-poke-of") or soup.select(".poke-of"):
-                post_type = "poke-of"
-
-            if parsed_h_entry.get("content") and parsed_h_entry.get("content") in emoji.UNICODE_EMOJI:
-                post_type = "reacji"
 
             # Convert webmention published date to a readable timestamp rather than a datetime object per default (returns error and causes malformed parsing)
             if parsed_h_entry.get("published"):
@@ -294,11 +288,31 @@ def validate_webmentions():
             else:
                 content_html = None
 
-            cursor.execute("UPDATE webmentions SET contents = ?, property = ?, author_name = ?, author_photo = ?, author_url = ?, content_html = ?, status = ?, approved_to_show = ? WHERE source = ? AND target = ?",(content, post_type, author_name, author_photo, author_url, content_html, "valid", moderate, source, target ))
+            post_type = post_type_discovery.get_post_type(parsed_h_entry)
+
+            cursor.execute("""
+                UPDATE webmentions SET contents = ?,
+                    property = ?,
+                    author_name = ?,
+                    author_photo = ?,
+                    author_url = ?,
+                    content_html = ?,
+                    status = ?,
+                    approved_to_show = ? 
+                WHERE source = ? AND target = ?""",
+                    (content,
+                    post_type,
+                    author_name,
+                    author_photo,
+                    author_url,
+                    content_html,
+                    "valid",
+                    moderate,
+                    source,
+                    target)
+                )
             
             connection.commit()
-
-            # send notification to bot
 
             print("done with {}".format(source))
 
