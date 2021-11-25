@@ -1,5 +1,5 @@
 from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
-from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP
+from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP, WEBHOOK_API_KEY, WEBHOOK_SERVER, WEBHOOK_URL, WEBHOOK_API_KEY
 from .auth.indieauth import requires_indieauth
 import requests
 import datetime
@@ -28,6 +28,7 @@ def index():
 
 @main.route("/home")
 def homepage():
+    session["me"] = "s"
     # Only show dashboard if user is authenticated
     if not session.get("me"):
         return redirect("/login")
@@ -140,6 +141,17 @@ def receiver():
             ) VALUES (?, ?, ?, ?, ?, ?)""",
             (source, target, str(datetime.datetime.now()), "validating", "", "", )
         )
+
+        if WEBHOOK_SERVER == True:
+            data = {
+                "message": "You have received a webmention from {} to {}".format(source, target)
+            }
+
+            headers = {
+                "Authorization": "Bearer {}".format(WEBHOOK_API_KEY)
+            }
+
+            requests.post(WEBHOOK_URL, data=data, headers=headers)
 
         return jsonify({"message": "Accepted."}), 202
 
@@ -374,7 +386,7 @@ def retrieve_sent_webmentions_json():
 
 @main.route("/received")
 def retrieve_webmentions():
-    target = request.args.get("target")
+    target = request.args.get("target").strip("/")
     property = request.args.get("property")
     since = request.args.get("since")
     key = request.args.get("key")

@@ -163,15 +163,33 @@ Then you should install the dependencies necessary to run this project:
 
 ### Configuration variables
 
-You will then need to create a .env file. This file should contain an API key that you keep to yourself:
+Copy the sample_config.py file into a new file called config.py. Then, adjust the variables according to your needs.
 
-    api-key=THIS_IS_YOUR_KEY
+Here are the definitions of each variable:
 
-Please also read the config.py file and populate it with the correct values.
+- RSS_DIRECTORY: The path of folder in which you want to save your RSS feed.
+- CALLBACK_URL: The place where the authentication server should send a callback response.
+- CLIENT_ID: The client ID for your application.
+- TOKEN_ENDPOINT: The IndieAuth token endpoint you are going to use for authentication.
+- AUTH_ENDPOINT: The IndieAuth authorization endpoint you are going to use for authentication.
+- ME: Your domain name that you are going to use to authenticate with the service.
+- SHOW_SETUP: Show the /setup page.
+- SECRET_KEY: Secret key for Flask.
+- WEBHOOK_SERVER: Enable this if you want to receive notifications when you get a webmention.
+- WEBHOOK_URL: The URL to which webhooks are sent.
+- WEBHOOK_API_KEY: A key you use to protect your webhook endpoint.
 
-You will need to specify the callback URL for your webmention endpoint, your client ID, your token endpoint, your domain name, and the directory in which your RSS feed should be placed.
+The other variables in sample_config.py can be left as is.
 
-Examples are provided in the config.py file.
+### Webhook Support
+
+This application sends a webhook to the specified webhook server with the following payload:
+
+    {"message": "You have received a webmention from SOURCE to TARGET"}
+
+The source value is the URL where the webmention sent can be found. The target is the URL on your site to which the webmention was sent.
+
+This stage happens when you receive a webmention, not when a webmention is validated.
 
 ### Setting up the database
 

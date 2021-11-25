@@ -1,14 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-    .feed li {
-        background: white;
-        border-radius: 15px;
-        border: 1px solid lightgrey;
-        margin-bottom: 10px;
-        padding: 10px;
-    }
-</style>
 <section class="feed">
     <h1>Hello, {{ session.get("me").replace("https://", "").replace("http://", "").strip("/") }}!</h1>
     <p>You have received {{ received_count }} webmention{% if received_count != 1 %}s{% endif %}.</p>

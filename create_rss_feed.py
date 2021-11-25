@@ -1,4 +1,5 @@
 from feedgen.feed import FeedGenerator
+from config import RSS_DIRECTORY
 import dateutil
 import sqlite3
 
@@ -14,7 +15,7 @@ def generate_feed():
     fg.description("Webmentions sent to webmention.jamesg.blog")
     fg.language("en")
 
-    connection = sqlite3.connect("/home/capjamesg/webmentions.db")
+    connection = sqlite3.connect(RSS_DIRECTORY + "/webmentions.db")
 
     with connection:
         cursor = connection.cursor()
