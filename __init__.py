@@ -18,11 +18,7 @@ def create_app():
 
     app.secret_key = SECRET_KEY
 
-    from .models import User
-
-    login_manager = LoginManager()
-    login_manager.login_view = 'main.login'
-    login_manager.init_app(app)
+    # from .models import User
     
     @app.template_filter("convert_time")
     def _jinja2_filter_datetime(date, fmt=None):
@@ -47,10 +43,6 @@ def create_app():
     from .seed import seed_db as seed_blueprint
 
     app.register_blueprint(seed_blueprint)
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        return User.query.get(int(user_id))
 
     @app.errorhandler(404)
     def page_not_found(e):

@@ -1,9 +1,5 @@
 
 from flask import Blueprint
-import click
-from werkzeug.security import generate_password_hash
-from . import db
-from .models import User
 import sqlite3
 
 seed_db = Blueprint('seed', __name__)

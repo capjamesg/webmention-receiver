@@ -9,7 +9,7 @@ import random
 import requests
 import datetime
 from create_rss_feed import generate_feed
-import emoji
+from config import CLIENT_ID, RSS_DIRECTORY
 
 def process_vouch(vouch, cursor, source):
     # use vouch to flag webmentions for moderation
@@ -39,8 +39,6 @@ def process_vouch(vouch, cursor, source):
                             moderate = False
 
     return moderate
-
-ROOT_DIRECTORY = "/home/capjamesg/"
 
 def validate_headers(request_item, cursor, source, target):
     validated = True
@@ -133,7 +131,7 @@ def process_pending_webmention(item, cursor):
         cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
 
 def validate_webmentions():
-    connection = sqlite3.connect(ROOT_DIRECTORY + "webmentions.db")
+    connection = sqlite3.connect(RSS_DIRECTORY + "webmentions.db")
     
     cursor = connection.cursor()
 
@@ -271,10 +269,10 @@ def validate_webmentions():
                     extension = "jpeg"
 
                 if r.status_code == 200:
-                    with open("/home/capjamesg/webmention_receiver/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
+                    with open(RSS_DIRECTORY + "/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
                         f.write(r.content)
 
-                author_photo = "https://webmention.jamesg.blog/static/images/" + random_letters + "." + extension
+                author_photo = CLIENT_ID + "/static/images/" + random_letters + "." + extension
 
             if parsed_h_entry.get("content-plain"):
                 content = parsed_h_entry["content-plain"]
