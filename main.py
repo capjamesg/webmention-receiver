@@ -28,7 +28,6 @@ def index():
 
 @main.route("/home")
 def homepage():
-    session["me"] = "s"
     # Only show dashboard if user is authenticated
     if not session.get("me"):
         return redirect("/login")
@@ -589,9 +588,9 @@ def delete_vouch():
     flash("Vouch deleted.")
     return redirect("/vouch")
 
-@main.route("/static/images/<path:filename>")
+@main.route("/static/images/<filename>")
 def send_images(filename):
-    return send_from_directory(main.static_folder.strip("/") + "/images/", filename)
+    return send_from_directory(RSS_DIRECTORY + "/static/images/", filename)
 
 @main.route("/robots.txt")
 def robots():
