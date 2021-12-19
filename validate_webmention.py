@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from .send import send_function
+from send import send_function
 import post_type_discovery as post_type_discovery
 import sqlite3
 import mf2py
@@ -9,11 +9,27 @@ import random
 import requests
 import datetime
 from create_rss_feed import generate_feed
-from config import CLIENT_ID, RSS_DIRECTORY
+from config import CLIENT_ID, RSS_DIRECTORY, WEBHOOK_SERVER, WEBHOOK_API_KEY, WEBHOOK_URL
+
+def canonicalize_url(url, domain, full_url=None):
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    elif url.startswith("//"):
+        return "https:" + domain.strip() + "/" + url
+    elif url.startswith("/"):
+        return "https://" + domain.strip() + "/" + url
+    elif url.startswith("./"):
+        return full_url + url.replace(".", "")
+    elif url.startswith("../"):
+        return "https://" + domain.strip() + "/" + url[3:]
+    else:
+        return "https://" + url
 
 def process_vouch(vouch, cursor, source):
     # use vouch to flag webmentions for moderation
     # see Vouch spec for more: https://indieweb.org/Vouch
+    moderate = False
+    
     if vouch and vouch != "":
         vouch_domain = vouch.split("/")[2]
 
@@ -27,7 +43,10 @@ def process_vouch(vouch, cursor, source):
             vouch_list = [v[0] for v in vouch_list]
 
             if vouch_domain in vouch_list:
-                r = requests.get(vouch)
+                try:
+                    r = requests.get(vouch)
+                except:
+                    return moderate
 
                 soup = BeautifulSoup(r.text, "lxml")
 
@@ -91,7 +110,10 @@ def process_pending_webmention(item, cursor):
                 if last_url_sent == entry['properties']['url'][0]:
                     break
 
-                get_page = requests.get(entry['properties']['url'][0])
+                try:
+                    get_page = requests.get(canonicalize_url(entry['properties']['url'][0], domain, entry['properties']['url'][0]))
+                except:
+                    continue
 
                 if get_page.status_code == 200:
 
@@ -102,15 +124,21 @@ def process_pending_webmention(item, cursor):
                     else:
                         continue
 
-                    links = [link.get("href") for link in soup.find_all('a') if link.get("href") and not link.get("href").startswith("https://" + domain) \
+                    links = [link.get("href") for link in soup.find_all('a') if link.get("href") \
+                        and not link.get("href").startswith("https://" + domain) \
                         and not link.get("href").startswith("http://" + domain) \
-                        and not link.get("href").startswith("/") and not link.get("href").startswith("#") and not link.get("href").startswith("javascript:")]
+                        and not link.get("href").startswith("/") and not link.get("href").startswith("#") \
+                        and not link.get("href").startswith("javascript:")]
 
                     links = list(set(links))
 
                     for url in links:
+                        url = canonicalize_url(url, domain, url)
+
+                        entry['properties']['url'][0] = canonicalize_url(url, domain, entry['properties']['url'][0])
+
                         # if item in db, don't add again
-                        in_db = cursor.execute("SELECT * FROM webmentions WHERE source = ? and target = ?", (entry['properties']['url'][0], url)).fetchone()
+                        in_db = cursor.execute("SELECT * FROM sent_webmentions WHERE source = ? and target = ?", (entry['properties']['url'][0], url)).fetchone()
 
                         if in_db:
                             continue
@@ -123,12 +151,24 @@ def process_pending_webmention(item, cursor):
                         # Add webmentions to sent_webmentions table
                         
                         cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item) )
+                        
                         print("Webmention sent to " + item[0] + " from " + item[1])
+
+                        if WEBHOOK_SERVER == True:
+                            data = {
+                                "message": "A webmention has been sent by Webmention Endpoint to {}".format(item[0])
+                            }
+
+                            headers = {
+                                "Authorization": "Bearer {}".format(WEBHOOK_API_KEY)
+                            }
+
+                            requests.post(WEBHOOK_URL, data=data, headers=headers)
                     
-    if not last_url_sent:
-        cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['url'][0]))
-    else:
-        cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
+        if not last_url_sent and entries[0]:
+            cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['url'][0]))
+        else:
+            cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
 
 def validate_webmentions():
     connection = sqlite3.connect(RSS_DIRECTORY + "webmentions.db")
@@ -171,6 +211,10 @@ def validate_webmentions():
                 contents = "Source timed out."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
+                continue
+            except:
+                contents = "Webmention failed. Reason unknown."
+                cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
                 continue
 
             try:
@@ -255,24 +299,27 @@ def validate_webmentions():
                 author_name = None
 
             if author_photo:
-                r = requests.get(author_photo)
+                try:
+                    r = requests.get(author_photo)
 
-                random_letters = "".join(random.choice(string.ascii_lowercase) for i in range(8))
+                    random_letters = "".join(random.choice(string.ascii_lowercase) for i in range(8))
 
-                if "jpg" in author_photo:
-                    extension = "jpg"
-                elif "png" in author_photo:
-                    extension = "png"
-                elif "gif" in author_photo:
-                    extension = "gif"
-                else:
-                    extension = "jpeg"
+                    if "jpg" in author_photo:
+                        extension = "jpg"
+                    elif "png" in author_photo:
+                        extension = "png"
+                    elif "gif" in author_photo:
+                        extension = "gif"
+                    else:
+                        extension = "jpeg"
 
-                if r.status_code == 200:
-                    with open(RSS_DIRECTORY + "/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
-                        f.write(r.content)
+                    if r.status_code == 200:
+                        with open(RSS_DIRECTORY + "/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
+                            f.write(r.content)
 
-                author_photo = CLIENT_ID + "/static/images/" + random_letters + "." + extension
+                    author_photo = CLIENT_ID + "/static/images/" + random_letters + "." + extension
+                except:
+                    pass
 
             if parsed_h_entry.get("content-plain"):
                 content = parsed_h_entry["content-plain"]

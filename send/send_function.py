@@ -3,12 +3,16 @@ import datetime
 import requests
 
 def send_function(source, target):
-    if not (source.startswith("http://") or source.startswith("https://")) and (target.startswith("http://") or target.startswith("https://")):
+    if not (source.startswith("http://") or source.startswith("https://")) or not (target.startswith("http://") or target.startswith("https://")):
         message = "Source and target must use http:// or https:// protocols."
         return message, None
 
     # set up bs4
-    r = requests.get(target, allow_redirects=True, timeout=10)
+    try:
+        r = requests.get(target, allow_redirects=True, timeout=10)
+    except:
+        message = "Error: Could not connect to target URL."
+        return message, None
 
     soup = BeautifulSoup(r.text, "lxml")
     
