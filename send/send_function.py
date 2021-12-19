@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import ipaddress
 import datetime
 import requests
 
@@ -41,8 +42,19 @@ def send_function(source, target):
         message = "No endpoint could be found for this resource."
         return message, None
 
-    if endpoint == "0.0.0.0" or endpoint == "127.0.0.1" or endpoint == "localhost":
-        message = "This resource is not supported."
+    try:
+        endpoint_as_ip = ipaddress.ip_address(endpoint)
+
+        if endpoint.is_private == True or endpoint.is_multicast == True \
+            or endpoint_as_ip.is_loopback == True or endpoint_as_ip.is_unspecified == True \
+                or endpoint_as_ip.is_reserved == True or endpoint_as_ip.is_link_local == True:
+            message = "The endpoint does not connect to an accepted IP address."
+            return message, None
+    except ValueError:
+        pass
+
+    if endpoint == "localhost":
+        message = "localhost is not a valid endpoint."
         return message, None
 
     if endpoint == "":
