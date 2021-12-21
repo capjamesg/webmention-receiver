@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from send import send_function
-import post_type_discovery as post_type_discovery
+import indieweb_utils
 import sqlite3
 import mf2py
 import mf2util
@@ -25,11 +25,40 @@ def canonicalize_url(url, domain, full_url=None):
     else:
         return "https://" + url
 
+def final_checks(cursor, entry, url):
+    # if item in db, don't add again
+    in_db = cursor.execute("SELECT * FROM sent_webmentions WHERE source = ? and target = ?", (entry['properties']['url'][0], url)).fetchone()
+
+    if in_db:
+        return
+
+    _, item = send_function.send_function(entry['properties']['url'][0], url)
+
+    if item == None:
+        return
+
+    # Add webmentions to sent_webmentions table
+    
+    cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item) )
+    
+    print("Webmention sent to " + item[0] + " from " + item[1])
+
+    if WEBHOOK_SERVER == True:
+        data = {
+            "message": "A webmention has been sent by Webmention Endpoint to {}".format(item[0])
+        }
+
+        headers = {
+            "Authorization": "Bearer {}".format(WEBHOOK_API_KEY)
+        }
+
+        requests.post(WEBHOOK_URL, data=data, headers=headers)
+
 def process_vouch(vouch, cursor, source):
     # use vouch to flag webmentions for moderation
     # see Vouch spec for more: https://indieweb.org/Vouch
     moderate = False
-    
+
     if vouch and vouch != "":
         vouch_domain = vouch.split("/")[2]
 
@@ -137,33 +166,7 @@ def process_pending_webmention(item, cursor):
 
                         entry['properties']['url'][0] = canonicalize_url(url, domain, entry['properties']['url'][0])
 
-                        # if item in db, don't add again
-                        in_db = cursor.execute("SELECT * FROM sent_webmentions WHERE source = ? and target = ?", (entry['properties']['url'][0], url)).fetchone()
-
-                        if in_db:
-                            continue
-
-                        _, item = send_function.send_function(entry['properties']['url'][0], url)
-
-                        if item == None:
-                            continue
-
-                        # Add webmentions to sent_webmentions table
-                        
-                        cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item) )
-                        
-                        print("Webmention sent to " + item[0] + " from " + item[1])
-
-                        if WEBHOOK_SERVER == True:
-                            data = {
-                                "message": "A webmention has been sent by Webmention Endpoint to {}".format(item[0])
-                            }
-
-                            headers = {
-                                "Authorization": "Bearer {}".format(WEBHOOK_API_KEY)
-                            }
-
-                            requests.post(WEBHOOK_URL, data=data, headers=headers)
+                        final_checks(cursor, entry, url)
                     
         if not last_url_sent and entries[0]:
             cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['url'][0]))
@@ -333,7 +336,7 @@ def validate_webmentions():
             else:
                 content_html = None
 
-            post_type = post_type_discovery.get_post_type(parsed_h_entry)
+            post_type = indieweb_utils.get_post_type(parsed_h_entry)
 
             cursor.execute("""
                 UPDATE webmentions SET contents = ?,

@@ -485,15 +485,25 @@ def stats_page():
 
         get_sent_webmentions = cursor.execute("SELECT count(*) FROM sent_webmentions;").fetchone()[0]
 
-        received_types = cursor.execute("SELECT property, count(*) FROM webmentions WHERE status = 'valid' GROUP BY property;").fetchall()
+        received_types = cursor.execute(
+            "SELECT property, count(*) FROM webmentions WHERE status = 'valid' GROUP BY property;"
+        ).fetchall()
 
-        pending_webmention_count = cursor.execute("SELECT count(*) FROM webmentions WHERE status = 'validating';").fetchone()[0]
+        pending_webmention_count = cursor.execute(
+            "SELECT count(*) FROM webmentions WHERE status = 'validating';"
+        ).fetchone()[0]
 
-        moderation_webmention_count = cursor.execute("SELECT count(*) FROM webmentions WHERE approved_to_show = 0;").fetchone()[0]
+        moderation_webmention_count = cursor.execute(
+            "SELECT count(*) FROM webmentions WHERE approved_to_show = 0;"
+        ).fetchone()[0]
 
-        received_months = cursor.execute("SELECT strftime('%Y-%m', received_date) AS month, count(*) FROM webmentions WHERE status = 'valid' GROUP BY month;").fetchall()
+        received_months = cursor.execute(
+            "SELECT strftime('%Y-%m', received_date) AS month, count(*) FROM webmentions WHERE status = 'valid' GROUP BY month;"
+        ).fetchall()
 
-        received_years = cursor.execute("SELECT strftime('%Y', received_date) AS year, count(*) FROM webmentions WHERE status = 'valid' GROUP BY year;").fetchall()
+        received_years = cursor.execute(
+            "SELECT strftime('%Y', received_date) AS year, count(*) FROM webmentions WHERE status = 'valid' GROUP BY year;"
+        ).fetchall()
 
         return render_template("user/stats.html",
             title="Webmention Statistics",

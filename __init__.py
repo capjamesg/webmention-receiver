@@ -1,9 +1,21 @@
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
 from .config import SECRET_KEY
 import dateutil.parser
+from .config import SENTRY_DSN, SENTRY_SERVER_NAME
 import os
+
+# set up sentry for error handling
+if SENTRY_DSN != "":
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[FlaskIntegration()],
+        traces_sample_rate=1.0,
+        server_name=SENTRY_SERVER_NAME
+    )
 
 # init SQLAlchemy so we can use it later in our models
 db = SQLAlchemy()
