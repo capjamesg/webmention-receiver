@@ -1,6 +1,6 @@
 from flask import request, jsonify, render_template, redirect, flash, Blueprint, send_from_directory, abort, session, current_app
-from .config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP, WEBHOOK_API_KEY, WEBHOOK_SERVER, WEBHOOK_URL, WEBHOOK_API_KEY
-from .auth.indieauth import requires_indieauth
+from config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP, WEBHOOK_API_KEY, WEBHOOK_SERVER, WEBHOOK_URL, WEBHOOK_API_KEY
+from auth.indieauth import requires_indieauth
 import requests
 import datetime
 import sqlite3
@@ -23,7 +23,7 @@ def index():
         return redirect("/home")
 
     return render_template("index.html",
-        title="{} Webmention Receiver Home".format(current_app.config["ME"].strip().replace("https://", "").replace("http://", ""))
+        title=f"{current_app.config['ME'].strip().replace('https://', '').replace('http://', '')} Webmention Receiver Home"
     )
 
 @main.route("/home")
@@ -105,7 +105,7 @@ def receiver():
     target_domain = target.split("/")[2]
 
     if not target_domain.endswith(raw_domain):
-        return jsonify({"message": "Target must be a {} resource.".format(raw_domain)}), 400
+        return jsonify({"message": f"Target must be a {raw_domain} resource."}), 400
 
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -143,11 +143,11 @@ def receiver():
 
         if WEBHOOK_SERVER == True:
             data = {
-                "message": "You have received a webmention from {} to {}".format(source, target)
+                "message": f"You have received a webmention from {source} to {target}"
             }
 
             headers = {
-                "Authorization": "Bearer {}".format(WEBHOOK_API_KEY)
+                "Authorization": f"Bearer {WEBHOOK_API_KEY}"
             }
 
             requests.post(WEBHOOK_URL, data=data, headers=headers)
@@ -172,7 +172,7 @@ def delete_webmention():
 
             cursor.execute("DELETE FROM webmentions WHERE target = ? AND source = ?", (target, source))
 
-        flash("Webmention from {} has been deleted.".format(target))
+        flash(f"Webmention from {target} has been deleted.")
         return redirect("/")
     else:
         return abort(405)
@@ -210,7 +210,7 @@ def approve_webmention():
                 (show_value, target, source)
             )
 
-        flash("Webmention from {} has been approved.".format(target))
+        flash(f"Webmention from {target} has been approved.")
         return redirect("/")
     else:
         return abort(405)
@@ -240,7 +240,7 @@ def view_sent_webmentions_page():
         cursor = connection.cursor()
 
         count = cursor.execute("SELECT COUNT(id) FROM sent_webmentions").fetchone()[0]
-        to_process = cursor.execute("""SELECT id,
+        to_process = cursor.execute(f"""SELECT id,
             source,
             target,
             sent_date,
@@ -249,8 +249,8 @@ def view_sent_webmentions_page():
             webmention_endpoint,
             location_header
             FROM sent_webmentions
-            ORDER BY sent_date {}
-            LIMIT 10 OFFSET ?;""".format(sort_order), (offset,)
+            ORDER BY sent_date {sort_order}
+            LIMIT 10 OFFSET ?;""", (offset,)
         ).fetchall()
 
         for c in to_process:
@@ -259,7 +259,7 @@ def view_sent_webmentions_page():
                 if r.status_code == 200:
                     text = r.text
                 else:
-                    text = "Error: {}, {}".format(r.status_code, r.text)
+                    text = f"Error: {r.status_code}, {r.text}"
 
                 cursor.execute("""
                     UPDATE sent_webmentions
@@ -273,7 +273,7 @@ def view_sent_webmentions_page():
     with connection:
         cursor = connection.cursor()
 
-        webmentions = cursor.execute("""SELECT id,
+        webmentions = cursor.execute(f"""SELECT id,
             source,
             target,
             sent_date,
@@ -282,8 +282,8 @@ def view_sent_webmentions_page():
             webmention_endpoint,
             location_header
             FROM sent_webmentions
-            ORDER BY sent_date {}
-            LIMIT 10 OFFSET ?;""".format(sort_order), (offset,)
+            ORDER BY sent_date {sort_order}
+            LIMIT 10 OFFSET ?;""", (offset,)
         ).fetchall()
 
     return render_template(
@@ -316,7 +316,7 @@ def view_sent_webmention(wm):
             if r.status_code == 200:
                 text = r.text
             else:
-                text = "Error: {}, {}".format(r.status_code, r.text)
+                text = f"Error: {r.status_code}, {r.text}"
 
             cursor.execute("""
                 UPDATE sent_webmentions
@@ -337,7 +337,7 @@ def view_sent_webmention(wm):
             final_parsed_response = parsed_response
         
         if webmention:
-            return render_template("dashboard/webmention.html", webmention=webmention, title="Webmention to {} Details".format(webmention[1]), \
+            return render_template("dashboard/webmention.html", webmention=webmention, title=f"Webmention to {webmention[1]} Details", \
                 response=final_parsed_response)
         else:
             return abort(404)
@@ -385,7 +385,7 @@ def retrieve_sent_webmentions_json():
 
 @main.route("/received")
 def retrieve_webmentions():
-    target = request.args.get("target").strip("/")
+    target = request.args.get("target").strip("/") + "/"
     property = request.args.get("property")
     since = request.args.get("since")
     key = request.args.get("key")
@@ -423,10 +423,10 @@ def retrieve_webmentions():
 
         count = cursor.execute("SELECT COUNT(source), property FROM webmentions GROUP BY property;").fetchall()
     else:
-        get_webmentions = cursor.execute("SELECT * FROM webmentions {} ORDER BY received_date DESC;".format(where_clause), attributes, )
+        get_webmentions = cursor.execute(f"SELECT * FROM webmentions {where_clause} ORDER BY received_date DESC;", attributes, )
         result = change_to_json(get_webmentions)
 
-        count = cursor.execute("SELECT COUNT(source), property FROM webmentions {} GROUP BY property;".format(where_clause), attributes, ).fetchall()
+        count = cursor.execute(f"SELECT COUNT(source), property FROM webmentions {where_clause} GROUP BY property;", attributes, ).fetchall()
 
     aggregate_count = 0
 
@@ -478,6 +478,8 @@ def webhook_check():
 def stats_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
+    format = request.args.get("format")
+
     with connection:
         cursor = connection.cursor()
 
@@ -505,6 +507,17 @@ def stats_page():
             "SELECT strftime('%Y', received_date) AS year, count(*) FROM webmentions WHERE status = 'valid' GROUP BY year;"
         ).fetchall()
 
+        if format == "json":
+            return jsonify({
+                "webmentions": get_webmentions,
+                "sent_webmentions": get_sent_webmentions,
+                "received_types": received_types,
+                "pending_webmention_count": pending_webmention_count,
+                "moderation_webmention_count": moderation_webmention_count,
+                "received_months": received_months,
+                "received_years": received_years
+            }), 200
+            
         return render_template("user/stats.html",
             title="Webmention Statistics",
             received_count=get_webmentions,

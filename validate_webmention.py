@@ -45,11 +45,11 @@ def final_checks(cursor, entry, url):
 
     if WEBHOOK_SERVER == True:
         data = {
-            "message": "A webmention has been sent by Webmention Endpoint to {}".format(item[0])
+            "message": f"A webmention has been sent by Webmention Endpoint to {item[0]}"
         }
 
         headers = {
-            "Authorization": "Bearer {}".format(WEBHOOK_API_KEY)
+            "Authorization": f"Bearer {WEBHOOK_API_KEY}"
         }
 
         requests.post(WEBHOOK_URL, data=data, headers=headers)
@@ -195,7 +195,7 @@ def validate_webmentions():
 
             moderate = True
 
-            print("processing webmention from {} to {}".format(source, target))
+            print(f"processing webmention from {source} to {target}")
                 
             # Only allow 3 redirects before raising an error
             session = requests.Session()
@@ -317,7 +317,7 @@ def validate_webmentions():
                         extension = "jpeg"
 
                     if r.status_code == 200:
-                        with open(RSS_DIRECTORY + "/static/images/{}".format(random_letters + "." + extension), "wb+") as f:
+                        with open(RSS_DIRECTORY + f"/static/images/{random_letters + '.' + extension}", "wb+") as f:
                             f.write(r.content)
 
                     author_photo = CLIENT_ID + "/static/images/" + random_letters + "." + extension
@@ -362,9 +362,9 @@ def validate_webmentions():
             
             connection.commit()
 
-            print("done with {}".format(source))
+            print(f"done with {source}")
 
-        print("{} Webmentions processed.".format(len(get_webmentions_for_url)))
+        print(f"{len(get_webmentions_for_url)} Webmentions processed.")
 
 validate_webmentions()
 

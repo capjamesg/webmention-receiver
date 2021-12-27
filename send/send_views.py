@@ -66,7 +66,7 @@ def send_webmention():
             , tuple(item) )
             id = cursor.lastrowid
         
-        return redirect("/sent/{}".format(id))
+        return redirect(f"/sent/{id}")
 
     return render_template("dashboard/send_webmention.html", title="Send a Webmention")
 
