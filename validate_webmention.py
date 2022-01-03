@@ -164,7 +164,7 @@ def process_pending_webmention(item, cursor):
                     for url in links:
                         url = canonicalize_url(url, domain, url)
 
-                        entry['properties']['url'][0] = canonicalize_url(url, domain, entry['properties']['url'][0])
+                        entry['properties']['url'][0] = canonicalize_url(entry['properties']['url'][0], domain, entry['properties']['url'][0])
 
                         final_checks(cursor, entry, url)
                     
