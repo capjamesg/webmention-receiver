@@ -1,10 +1,10 @@
-from flask import request, jsonify, render_template, redirect, flash, Blueprint, current_app
-from bs4 import BeautifulSoup
+import sqlite3
+
+from flask import request, jsonify, render_template, redirect, flash, Blueprint
+
 from ..config import ROOT_DIRECTORY
 from ..auth.indieauth import requires_indieauth
 from .send_function import *
-import requests
-import sqlite3
 
 send = Blueprint('send', __name__, template_folder='templates')
 
