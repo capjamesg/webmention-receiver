@@ -77,6 +77,10 @@ def send_webmention_anyone():
         source = request.form.get("source")
         target = request.form.get("target")
 
-        message = send_webmention(source, target)
+        message, _ = send_function(source, target)
         
-        return render_template("send_open.html", message=message)
+        return render_template(
+            "send_open.html", 
+            message=message,
+            original_url=target
+        )
