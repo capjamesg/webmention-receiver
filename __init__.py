@@ -40,19 +40,19 @@ def create_app():
         return native.strftime(format) 
 
     # blueprint for non-auth parts of app
-    from .main import main as main_blueprint
+    from main import main as main_blueprint
 
     app.register_blueprint(main_blueprint)
 
-    from .auth.auth import auth as auth_blueprint
+    from auth.auth import auth as auth_blueprint
 
     app.register_blueprint(auth_blueprint)
 
-    from .send.send_views import send as send_blueprint
+    from send.send_views import send as send_blueprint
 
     app.register_blueprint(send_blueprint)
 
-    from .seed import seed_db as seed_blueprint
+    from seed import seed_db as seed_blueprint
 
     app.register_blueprint(seed_blueprint)
 
