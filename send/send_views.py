@@ -3,8 +3,8 @@ import sqlite3
 import indieweb_utils
 from flask import request, jsonify, render_template, redirect, flash, Blueprint
 
-from ..config import ROOT_DIRECTORY
-from ..auth.indieauth import requires_indieauth
+from config import ROOT_DIRECTORY
+from auth.indieauth import requires_indieauth
 from .send_function import *
 
 send = Blueprint('send', __name__, template_folder='templates')

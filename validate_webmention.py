@@ -10,7 +10,7 @@ import mf2util
 import requests
 
 from send import send_function
-# from create_rss_feed import generate_feed
+from create_rss_feed import generate_feed
 from config import CLIENT_ID, RSS_DIRECTORY, WEBHOOK_SERVER, WEBHOOK_API_KEY, WEBHOOK_URL
 
 def final_checks(cursor, entry, url):

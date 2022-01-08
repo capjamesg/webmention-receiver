@@ -1,8 +1,8 @@
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
-from .config import SECRET_KEY
+from config import SECRET_KEY
 import dateutil.parser
-from .config import SENTRY_DSN, SENTRY_SERVER_NAME
+from config import SENTRY_DSN, SENTRY_SERVER_NAME
 import os
 
 # set up sentry for error handling
