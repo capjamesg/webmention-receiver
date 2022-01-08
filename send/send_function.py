@@ -25,9 +25,12 @@ def send_function(source, target):
     else:
         location_header = ""
 
-    try:
-        message = str(r.json())
-    except:
-        message = r.text
+    if r.status_code == 200 or r.status_code == 201 or r.status_code == 202:
+        message = "Webmention accepted"
+    else:
+        try:
+            message = str(r.json())
+        except:
+            message = r.text
 
     return message, [source, target, str(datetime.datetime.now()), r.status_code, message, endpoint, location_header]
