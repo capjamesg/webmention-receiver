@@ -1,5 +1,6 @@
 import sqlite3
 
+import indieweb_utils
 from flask import request, jsonify, render_template, redirect, flash, Blueprint
 
 from ..config import ROOT_DIRECTORY
@@ -12,7 +13,7 @@ send = Blueprint('send', __name__, template_folder='templates')
 def discover_webmention_endpoint():
     target = request.args.get("target")
 
-    endpoint = discover_webmention_endpoint(target)
+    endpoint, message = indieweb_utils.discover_webmention_endpoint(target)
 
     if endpoint == None:
         message = "No endpoint could be found for this resource."

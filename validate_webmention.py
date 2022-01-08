@@ -10,7 +10,7 @@ import mf2util
 import requests
 
 from send import send_function
-from create_rss_feed import generate_feed
+# from create_rss_feed import generate_feed
 from config import CLIENT_ID, RSS_DIRECTORY, WEBHOOK_SERVER, WEBHOOK_API_KEY, WEBHOOK_URL
 
 def final_checks(cursor, entry, url):
@@ -22,7 +22,7 @@ def final_checks(cursor, entry, url):
 
     _, item = send_function.send_function(entry['properties']['url'][0], url)
 
-    if item is None:
+    if len(item) == 0:
         return
 
     # Add webmentions to sent_webmentions table

@@ -3,7 +3,7 @@ import datetime
 import requests
 
 def send_function(source, target):
-    endpoint = indieweb_utils.discover_webmention_endpoint(target)
+    endpoint, message = indieweb_utils.discover_webmention_endpoint(target)
 
     if endpoint is None:
         return "There was an error sending the webmention", []
