@@ -1,8 +1,31 @@
-import indieweb_utils
 import datetime
+
+import indieweb_utils
 import requests
 
-def send_function(source, target):
+from config import MICROPUB_TOKEN
+
+def post_syndication_change(source, target, syndication_target, location_header):
+    if target == syndication_target and source.startswith("https://jamesg.blog"):
+        if location_header and location_header != "":
+            micropub_url = "https://micropub.jamesg.blog/micropub"
+
+            requests.post(
+                micropub_url,
+                data={
+                    "action": "update",
+                    "url": source,
+                    "add": {
+                        "syndication": location_header
+                    }
+                },
+                headers={
+                    "Authorization": "Bearer " + MICROPUB_TOKEN
+                }
+            )
+
+
+def send_function(source, target, is_validating=False):
     endpoint, message = indieweb_utils.discover_webmention_endpoint(target)
 
     if endpoint is None:
@@ -32,5 +55,10 @@ def send_function(source, target):
             message = str(r.json())
         except:
             message = r.text
+
+    # add syndication links to posts if necessary
+    if is_validating is True:
+        post_syndication_change(source, target, "https://brid.gy/publish/twitter", location_header)
+        post_syndication_change(source, target, "https://micro.blog/", location_header)
 
     return message, [source, target, str(datetime.datetime.now()), r.status_code, message, endpoint, location_header]

@@ -20,7 +20,7 @@ def final_checks(cursor, entry, url):
     if in_db:
         return
 
-    _, item = send_function.send_function(entry['properties']['url'][0], url)
+    _, item = send_function.send_function(entry['properties']['url'][0], url, is_validating=True)
 
     if len(item) == 0:
         return
