@@ -61,4 +61,4 @@ def send_function(source, target, is_validating=False):
         post_syndication_change(source, target, "https://brid.gy/publish/twitter", location_header)
         post_syndication_change(source, target, "https://micro.blog/", location_header)
 
-    return message, [source, target, str(datetime.datetime.now()), r.status_code, message, endpoint, location_header]
+    return message, [source, target, str(datetime.datetime.now()), r.status_code, message, endpoint, location_header, "", 1]

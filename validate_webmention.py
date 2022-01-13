@@ -11,7 +11,7 @@ import requests
 
 from send import send_function
 from create_rss_feed import generate_feed
-from config import CLIENT_ID, RSS_DIRECTORY, WEBHOOK_SERVER, WEBHOOK_API_KEY, WEBHOOK_URL
+from config import CLIENT_ID, RSS_DIRECTORY, WEBHOOK_SERVER, WEBHOOK_API_KEY, WEBHOOK_URL, ME
 
 def final_checks(cursor, entry, url):
     # if item in db, don't add again
@@ -20,20 +20,24 @@ def final_checks(cursor, entry, url):
     if in_db:
         return
 
+    print(entry['properties']['url'][0], url)
+
     _, item = send_function.send_function(entry['properties']['url'][0], url, is_validating=True)
+
+    print(item)
 
     if len(item) == 0:
         return
 
     # Add webmentions to sent_webmentions table
     
-    cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item))
+    cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header, vouch, approved_to_show) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item))
     
     print("Webmention sent to " + item[0] + " from " + item[1])
 
-    if WEBHOOK_SERVER :
+    if WEBHOOK_SERVER and item[0].split("/")[2] != ME:
         data = {
-            "message": f"A webmention has been sent by Webmention Endpoint to {item[0]}"
+            "message": f"A webmention has been sent to {item[0]}"
         }
 
         headers = {
