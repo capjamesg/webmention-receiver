@@ -1,16 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-    .feed li {
-        background: white;
-        border-radius: 15px;
-        border: 1px solid lightgrey;
-        margin-bottom: 10px;
-        padding: 10px;
-    }
-</style>
-<section class="feed">
-    <h1>Your sent webmentions</h1>
+<section class="feed main_content_box">
+    <h1>Mentions you have sent</h1>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
         <ul class="error">
@@ -21,8 +12,6 @@
         {% endif %}
     {% endwith %}
     <p>You have sent {{ count }} webmention{% if count != 1 %}s{% endif %}.</p>
-  </section>
-  <section class="feed">
     {% if webmentions | length == 0 %}
     <p>You have not sent any webmentions yet.</p>
     {% else %}
@@ -37,15 +26,14 @@
       {% for w in webmentions %}
         <li>
           <h3>Webmention to {{ w[2].split("//")[1] }}</h3>
-          <p>Target: <a href="{{ w[2] }}">{{ w[2] }}</a></p>
-          <p>Source: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
-          <p>Sent: {{ w[3] | convert_time }}</p>
+          <p>Sent from: <a href="{{ w[1] }}">{{ w[1] }}</a></p>
+          <p>Sent at: {{ w[3] | convert_time }}</p>
           <p>Status: {{ w[4] }}</p>
           <p><a href="/sent/{{ w[0] }}">See webmention.</a></p>
         </li>
       {% endfor %}
     </ul>
     {% endif %}
+    {% include "pagination.html" %}
   </section>
-  {% include "pagination.html" %}
 {% endblock %}

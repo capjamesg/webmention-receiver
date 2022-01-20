@@ -25,7 +25,7 @@ def post_syndication_change(source, target, syndication_target, location_header)
             )
 
 
-def send_function(source, target, is_validating=False):
+def send_webmention(source, target, is_validating=False):
     endpoint, message = indieweb_utils.discover_webmention_endpoint(target)
 
     if endpoint is None:

@@ -4,7 +4,6 @@ import indieweb_utils
 from flask import request, jsonify, render_template, redirect, flash, Blueprint
 
 from config import ROOT_DIRECTORY
-from auth.indieauth import requires_indieauth
 from .send_function import *
 
 send = Blueprint('send', __name__, template_folder='templates')
@@ -22,7 +21,6 @@ def discover_webmention_endpoint():
     return jsonify({"success": True, "endpoint": endpoint}), 200
 
 @send.route("/send", methods=["GET", "POST"])
-@requires_indieauth
 def send_webmention():
     if request.method == "POST":
         source = request.form.get("source")

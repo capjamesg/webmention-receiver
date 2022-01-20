@@ -1,17 +1,29 @@
-import string
-import random
-import datetime
-import sqlite3
-
 from bs4 import BeautifulSoup
+from send import send_function
 import indieweb_utils
+import sqlite3
 import mf2py
 import mf2util
+import string
+import random
 import requests
-
-from send import send_function
+import datetime
 from create_rss_feed import generate_feed
-from config import CLIENT_ID, RSS_DIRECTORY, WEBHOOK_SERVER, WEBHOOK_API_KEY, WEBHOOK_URL, ME
+from config import CLIENT_ID, RSS_DIRECTORY, WEBHOOK_SERVER, WEBHOOK_API_KEY, WEBHOOK_URL
+
+def canonicalize_url(url, domain, full_url=None):
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    elif url.startswith("//"):
+        return "https:" + domain.strip() + "/" + url
+    elif url.startswith("/"):
+        return "https://" + domain.strip() + "/" + url
+    elif url.startswith("./"):
+        return full_url + url.replace(".", "")
+    elif url.startswith("../"):
+        return "https://" + domain.strip() + "/" + url[3:]
+    else:
+        return "https://" + url
 
 def final_checks(cursor, entry, url):
     # if item in db, don't add again
@@ -20,31 +32,27 @@ def final_checks(cursor, entry, url):
     if in_db:
         return
 
-    print(entry['properties']['url'][0], url)
+    _, item = send_function.send_webmention(entry['properties']['url'][0], url)
 
-    _, item = send_function.send_function(entry['properties']['url'][0], url, is_validating=True)
-
-    print(item)
-
-    if len(item) == 0:
+    if item == None or item == []:
         return
 
     # Add webmentions to sent_webmentions table
     
-    cursor.execute("INSERT INTO sent_webmentions (source, target, sent_date, status_code, response, webmention_endpoint, location_header, vouch, approved_to_show) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(item))
-    
-    print("Webmention sent to " + item[0] + " from " + item[1])
-
-    if WEBHOOK_SERVER and item[0].split("/")[2] != ME:
-        data = {
-            "message": f"A webmention has been sent to {item[0]}"
-        }
-
-        headers = {
-            "Authorization": f"Bearer {WEBHOOK_API_KEY}"
-        }
-
-        requests.post(WEBHOOK_URL, data=data, headers=headers)
+    cursor.execute("""
+        INSERT INTO sent_webmentions (
+            source,
+            target,
+            sent_date,
+            status_code,
+            response,
+            webmention_endpoint,
+            location_header,
+            vouch,
+            approved_to_show
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, tuple(item))
 
 def process_vouch(vouch, cursor, source):
     # use vouch to flag webmentions for moderation
@@ -57,7 +65,7 @@ def process_vouch(vouch, cursor, source):
         if vouch_domain.endswith("jamesg.blog"):
             moderate = False
 
-        if moderate :
+        if moderate == True:
             vouch_list = cursor.execute("SELECT domain FROM vouch WHERE vouch_domain = ?", (vouch_domain, )).fetchall()
 
             # only get domains
@@ -73,9 +81,9 @@ def process_vouch(vouch, cursor, source):
 
                 # find hyperlink with source
                 # required for a vouch to be valid
-                for anchor in soup.find_all("a"):
-                    if anchor.get("href"):
-                        if anchor["href"] == source:
+                for a in soup.find_all("a"):
+                    if a.get("href"):
+                        if a["href"] == source:
                             moderate = False
 
     return moderate
@@ -108,51 +116,37 @@ def process_pending_webmention(item, cursor):
         return
 
     # find h_feed item
-    h_feed = None
+    h_feed = [item["children"] for item in parsed['items'] if item['type'] == ['h-feed'] or item['type'] == "h-feed"]
 
-    for item in parsed['items']:
-        if item['type'] == ['h-feed']:
-            h_feed = item
-
-    entries = []
-
-    # get all h-entry objects
+    # get all h-entries
     if h_feed:
-        for item in h_feed['children']:
-            if item['type'] == ['h-entry']:
-                entries.append(item)
+        entries = [item for item in h_feed[0] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
     else:
-        for item in parsed['items']:
-            if item['type'] == ['h-entry']:
-                entries.append(item)
+        entries = [item for item in parsed["items"] if item['type'] == 'h-entry' or item['type'] == ["h-entry"]]
 
     domain = feed_url.split("/")[2]
 
     if len(entries) > 0:
-        if last_url_sent is not None:
+        if last_url_sent != None:
             last_url_sent = last_url_sent[1]
         else:
             last_url_sent = ""
 
         last_url_sent = ""
         
-        if last_url_sent != entries[0]['properties']['url'][0]:
+        if entries[0]['properties'].get("url") and last_url_sent != entries[0]['properties']['url'][0]:
             for entry in entries:
                 if last_url_sent == entry['properties']['url'][0]:
                     break
 
                 try:
-                    canonicalized_url = indieweb_utils.canonicalize_url(
-                        entry['properties']['url'][0],
-                        domain,
-                        entry['properties']['url'][0]
-                    )
-                    get_page = requests.get(canonicalized_url)
+                    get_page = requests.get(canonicalize_url(entry['properties']['url'][0], domain, entry['properties']['url'][0]))
                 except:
                     continue
 
                 if get_page.status_code == 200:
-                    soup = BeautifulSoup(get_page.text, "lxml")
+
+                    soup = BeautifulSoup(get_page.text, 'html.parser')
 
                     if soup.select(".e-content"):
                         soup = soup.select(".e-content")[0]
@@ -168,32 +162,16 @@ def process_pending_webmention(item, cursor):
                     links = list(set(links))
 
                     for url in links:
-                        url = indieweb_utils.canonicalize_url(url, domain, url)
+                        url = canonicalize_url(url, domain, url)
 
-                        entry['properties']['url'][0] = indieweb_utils.canonicalize_url(
-                            entry['properties']['url'][0],
-                            domain,
-                            entry['properties']['url'][0]
-                        )
+                        entry['properties']['url'][0] = canonicalize_url(entry['properties']['url'][0], domain, entry['properties']['url'][0])
 
                         final_checks(cursor, entry, url)
                     
-        if not last_url_sent and entries[0]:
-            cursor.execute(
-                "INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)",
-                (
-                    feed_url,
-                    entries[0]['properties']['url'][0]
-                )
-            )
-        else:
-            cursor.execute(
-                "UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?",
-                (
-                    entries[0]['properties']['url'][0],
-                    feed_url
-                )
-            )
+            if not last_url_sent and entries[0]:
+                cursor.execute("INSERT INTO webhooks (feed_url, last_url_sent) VALUES (?, ?)", (feed_url, entries[0]['properties']['url'][0]))
+            else:
+                cursor.execute("UPDATE webhooks SET last_url_sent = ? WHERE feed_url = ?", (entries[0]['properties']['url'][0], feed_url))
 
 def validate_webmentions():
     connection = sqlite3.connect(RSS_DIRECTORY + "webmentions.db")
@@ -201,23 +179,19 @@ def validate_webmentions():
     cursor = connection.cursor()
 
     with connection:
-        get_pending_webmentions = cursor.execute(
-            "SELECT to_check FROM pending_webmentions;"
-        ).fetchall()
+        get_pending_webmentions = cursor.execute("SELECT to_check FROM pending_webmentions;").fetchall()
 
         for item in get_pending_webmentions:
             process_pending_webmention(item, cursor)
         
         cursor.execute("DELETE FROM pending_webmentions;")
             
-        get_webmentions_for_url = cursor.execute(
-            "SELECT source, target, vouch FROM webmentions WHERE status = 'validating';"
-        ).fetchall()
+        get_webmentions_for_url = cursor.execute("SELECT source, target, vouch FROM webmentions WHERE status = 'validating';").fetchall()
 
-        for item in get_webmentions_for_url:
-            source = item[0]
-            target = item[1]
-            vouch = item[2]
+        for u in get_webmentions_for_url:
+            source = u[0]
+            target = u[1]
+            vouch = u[2]
 
             moderate = True
 
@@ -233,38 +207,17 @@ def validate_webmentions():
                 validated_headers = validate_headers(check_source_size, cursor, source, target)
             except requests.exceptions.TooManyRedirects:
                 contents = "Source redirected too many times."
-                cursor.execute(
-                    "UPDATE webmentions SET status = ? WHERE source = ? and target = ?",
-                    (
-                        contents,
-                        source,
-                        target
-                    )
-                )
+                cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
                 continue
             except requests.exceptions.TimeoutError:
                 contents = "Source timed out."
-                cursor.execute(
-                    "UPDATE webmentions SET status = ? WHERE source = ? and target = ?",
-                    (
-                        contents,
-                        source,
-                        target
-                    )
-                )
+                cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
                 continue
             except:
                 contents = "Webmention failed. Reason unknown."
-                cursor.execute(
-                    "UPDATE webmentions SET status = ? WHERE source = ? and target = ?",
-                    (
-                        contents,
-                        source,
-                        target
-                    )
-                )
+                cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
                 continue
 
             try:
@@ -287,11 +240,11 @@ def validate_webmentions():
             # get all <link> tags
             meta_links = parse_page.find_all("link")
 
-            for link in meta_links:
+            for l in meta_links:
                 # use meta http-equiv status spec to detect 410s https://indieweb.org/meta_http-equiv_status
                 # detecting http-equiv status 410s is required by the webmention spec
-                if link.get("http-equiv") and link.get("http-equiv") == "Status":
-                    if link.get("content") == "410 Gone":
+                if l.get("http-equiv") and l.get("http-equiv") == "Status":
+                    if l.get("content") == "410 Gone":
                         # Support deleted webmention in line with the spec
                         cursor.execute("DELETE FROM webmentions WHERE source = ?;", (source, ))
 
@@ -308,9 +261,9 @@ def validate_webmentions():
             all_anchors = soup.find_all("a")
             contains_valid_link_to_target = False
 
-            for anchor in all_anchors:
-                if anchor.get("href"):
-                    if anchor["href"] == target:
+            for a in all_anchors:
+                if a.get("href"):
+                    if a["href"] == target:
                         contains_valid_link_to_target = True
 
             if target in get_source_for_validation:
@@ -318,7 +271,7 @@ def validate_webmentions():
 
             # Might want to comment out this if statement for testing
             #  and not source.startswith("https://brid.gy/like/instagram") (not used anymore)
-            if not contains_valid_link_to_target:
+            if contains_valid_link_to_target == False:
                 contents = "Document must contain source URL."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
@@ -332,8 +285,10 @@ def validate_webmentions():
 
             post_type = "reply"
 
-            # Convert webmention published date to a readable timestamp rather than a datetime object
-            # per default (returns error and causes malformed parsing)
+            if parsed_h_entry == None:
+                continue
+
+            # Convert webmention published date to a readable timestamp rather than a datetime object per default (returns error and causes malformed parsing)
             if parsed_h_entry.get("published"):
                 parsed_h_entry["published"] = parsed_h_entry["published"].strftime("%m/%d/%Y %H:%M:%S")
             else:
@@ -384,15 +339,9 @@ def validate_webmentions():
             else:
                 content_html = None
 
-            h_entry = [item for item in parse.to_dict()["items"] if item['type'] == ['h-entry']]
+            post_type = indieweb_utils.get_post_type(parsed_h_entry)
 
-            if len(h_entry) > 0:
-                post_type = indieweb_utils.get_post_type(h_entry[0])
-            else:
-                post_type = "reply"
-
-            cursor.execute(
-                """
+            cursor.execute("""
                 UPDATE webmentions SET contents = ?,
                     property = ?,
                     author_name = ?,
@@ -402,18 +351,16 @@ def validate_webmentions():
                     status = ?,
                     approved_to_show = ? 
                 WHERE source = ? AND target = ?""",
-                    (
-                        content,
-                        post_type,
-                        author_name,
-                        author_photo,
-                        author_url,
-                        content_html,
-                        "valid",
-                        moderate,
-                        source,
-                        target
-                    )
+                    (content,
+                    post_type,
+                    author_name,
+                    author_photo,
+                    author_url,
+                    content_html,
+                    "valid",
+                    moderate,
+                    source,
+                    target)
                 )
             
             connection.commit()

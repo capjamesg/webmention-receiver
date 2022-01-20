@@ -5,9 +5,10 @@ import datetime
 
 from flask import request, jsonify, render_template, redirect, flash, \
     Blueprint, send_from_directory, abort, session, current_app
+import mf2py
+import mf2util
 import requests
 
-from auth.indieauth import requires_indieauth
 from config import ROOT_DIRECTORY, RSS_DIRECTORY, SHOW_SETUP, \
     WEBHOOK_API_KEY, WEBHOOK_SERVER, WEBHOOK_URL, WEBHOOK_API_KEY
 
@@ -22,63 +23,54 @@ def change_to_json(database_result):
 
 @main.route("/")
 def index():
-    # redirect logged in users to the dashboard
     if session.get("me"):
-        return redirect("/home")
+        connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
+
+        page = request.args.get("page")
+
+        if page and int(page) > 1:
+            offset = (int(page) - 1) * 10
+            page = int(page)
+        else:
+            offset = 0
+            page = 1
+
+        sort_param = request.args.get("sort")
+
+        if sort_param == "oldest":
+            sort_order = "ASC"
+        else:
+            sort_order = "DESC"
+
+        cursor = connection.cursor()
+
+        with connection:
+            count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
+            webmentions = cursor.execute("""
+                SELECT source,
+                    target,
+                    received_date,
+                    contents,
+                    property,
+                    author_name
+                FROM webmentions
+                WHERE status = 'valid'
+                ORDER BY received_date {}
+                LIMIT 10 OFFSET ?;""".format(sort_order), (offset,) ).fetchall()
+
+        return render_template("dashboard/feed.html",
+            webmentions=webmentions,
+            sent=False,
+            received_count=count,
+            page=int(page),
+            page_count=math.ceil(int(count) / 10),
+            base_results_query="/home",
+            title="Received Webmentions",
+            sort=sort_param
+        )
 
     return render_template("index.html",
         title=f"{current_app.config['ME'].strip().replace('https://', '').replace('http://', '')} Webmention Receiver Home"
-    )
-
-@main.route("/home")
-def homepage():
-    # Only show dashboard if user is authenticated
-    if not session.get("me"):
-        return redirect("/login")
-
-    connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
-
-    page = request.args.get("page")
-
-    if page and int(page) > 1:
-        offset = (int(page) - 1) * 10
-        page = int(page)
-    else:
-        offset = 0
-        page = 1
-
-    sort_param = request.args.get("sort")
-
-    if sort_param == "oldest":
-        sort_order = "ASC"
-    else:
-        sort_order = "DESC"
-
-    cursor = connection.cursor()
-
-    with connection:
-        count = cursor.execute("SELECT COUNT(*) FROM webmentions").fetchone()[0]
-        webmentions = cursor.execute("""
-            SELECT source,
-                target,
-                received_date,
-                contents,
-                property,
-                author_name
-            FROM webmentions
-            WHERE status = 'valid'
-            ORDER BY received_date {}
-            LIMIT 10 OFFSET ?;""".format(sort_order), (offset,) ).fetchall()
-
-    return render_template("dashboard/feed.html",
-        webmentions=webmentions,
-        sent=False,
-        received_count=count,
-        page=int(page),
-        page_count=math.ceil(int(count) / 10),
-        base_results_query="/home",
-        title="Received Webmentions",
-        sort=sort_param
     )
 
 @main.route("/endpoint", methods=["POST"])
@@ -133,6 +125,30 @@ def receiver():
             )
 
         cursor.execute("DELETE FROM webmentions WHERE source = ? and target = ?", (source, target, ))
+
+        # check if webmention has already been sent to see if a salmention needs to be processed
+
+        already_sent = cursor.execute("SELECT source, target, content_html FROM webmentions WHERE source = ? and target = ?", (source, target, )).fetchall()
+
+        if already_sent:
+            current_content_html = already_sent[0][2]
+
+            parse = mf2py.Parser(url=source)
+            
+            parsed_h_entry = mf2util.interpret_comment(parse.to_dict(), source, target)
+            
+            if parsed_h_entry.get("content"):
+                content_html = parsed_h_entry["content"]
+
+                parsed_h_entry["content"] = parsed_h_entry["content"].replace("<a ", "<a rel='nofollow'>")
+            else:
+                content_html = None
+
+            if content_html != current_content_html:
+                cursor.execute("""UPDATE webmentions SET
+                    content_html = ?
+                    WHERE source = ? and target = ?
+                """, (content_html, source, target, ))
         
         cursor.execute("""INSERT INTO webmentions (
             source,
@@ -159,7 +175,6 @@ def receiver():
         return jsonify({"message": "Accepted."}), 202
 
 @main.route("/delete", methods=["POST"])
-@requires_indieauth
 def delete_webmention():
     if request.method == "POST":
         target = request.form.get("target")
@@ -182,7 +197,6 @@ def delete_webmention():
     return abort(405)
 
 @main.route("/approve", methods=["POST"])
-@requires_indieauth
 def approve_webmention():
     if request.method == "POST":
         target = request.form.get("target")
@@ -224,7 +238,6 @@ def approve_webmention():
     return abort(405)
 
 @main.route("/sent")
-@requires_indieauth
 def view_sent_webmentions_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -309,7 +322,6 @@ def view_sent_webmentions_page():
     )
 
 @main.route("/sent/<webmention_id>")
-@requires_indieauth
 def view_sent_webmention(webmention_id):
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -489,7 +501,6 @@ def webhook_check():
     return jsonify({"message": "URLs queued for processing."}), 202
 
 @main.route("/stats")
-@requires_indieauth
 def stats_page():
     connection = sqlite3.connect(ROOT_DIRECTORY + "/webmentions.db")
 
@@ -605,7 +616,7 @@ def see_vouch_list():
     return render_template(
         "dashboard/vouch.html",
         vouches=get_vouch_list,
-        title="Vouch List | Webmention Dashboard"
+        title="Vouch List "
     )
 
 @main.route("/vouch/delete", methods=["POST"])
@@ -633,9 +644,17 @@ def delete_vouch():
 def send_images(filename):
     return send_from_directory(RSS_DIRECTORY + "/static/images/", filename)
 
+@main.route("/static/icons/<filename>")
+def send_icons(filename):
+    return send_from_directory(RSS_DIRECTORY + "/static/icons/", filename)
+
 @main.route("/robots.txt")
 def robots():
     return send_from_directory(main.static_folder, "robots.txt")
+
+@main.route("/manifest.json")
+def manifest_json_file():
+    return send_from_directory(main.static_folder, "manifest.json")
 
 @main.route("/favicon.ico")
 def favicon():

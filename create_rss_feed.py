@@ -46,7 +46,7 @@ def generate_feed():
             fe.id(webmention[0])
 
             if post_type and webmention[5] and webmention[1]:
-                fe.title(f"{post_type} from {webmention[5]} to {webmention[1]}")
+                fe.title(f"")
             else:
                 fe.title(webmention[0])
 

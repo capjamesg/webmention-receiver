@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="feed">
+<section class="feed h-feed main_content_box">
     <h1>Hello, {{ session.get("me").replace("https://", "").replace("http://", "").strip("/") }}!</h1>
     <p>You have received {{ received_count }} webmention{% if received_count != 1 %}s{% endif %}.</p>
     <ul>
       {% for w in webmentions %}
-        <li>
+        <li class="h-entry">
             {% if w[4] == "like-of" %}
             {% set post_type = "❤️ Like" %}
             {% elif w[4] == "mention-of" %}
@@ -16,10 +16,10 @@
             {% set post_type = "💬 Reply" %}
             {% endif %}
         {% if w[3] %}
-        <p>{{ " ".join(w[3].split(" ")[:75]) }} {% if w[3].split(" ") | length > 75 %}... <a href="{{ w[0] }}">Read more</a>{% endif %}</p>
+        <p class="p-summary">{{ " ".join(w[3].split(" ")[:75]) }} {% if w[3].split(" ") | length > 75 %}... <a href="{{ w[0] }}">Read more</a>{% endif %}</p>
         {% else %}
         {% if w[6] %}
-        <div><img src="{{ w[6] }}" alt="Profile picture for {{ w[5] }}" height="50" width="50" /><p>Webmention from <a href="{{ w[7] }}">{{ w[5] }}</a></p></div>
+        <div><img src="{{ w[6] }}" class="u-photo" alt="Profile picture for {{ w[5] }}" height="50" width="50" /><p>Webmention from <a href="{{ w[7] }}">{{ w[5] }}</a></p></div>
         {% else %}
         {% endif %}
         {% endif %}

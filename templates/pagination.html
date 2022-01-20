@@ -7,7 +7,7 @@
         <li class="pages"><a href="{{ base_results_query }}?page={{ i }}" {% if i == page %}class="active_tab"{% endif %}>{{ i }}</a></li>
         {% endif %}
         {% if (i == page-2) or (i == page+2 and page+2 != page_count) %}
-        <li>...</li>
+        <li class="pages">...</li>
         {% endif %}
     {% endfor %}
     {% if page < page_count %}

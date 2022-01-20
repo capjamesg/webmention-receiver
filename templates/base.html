@@ -2,7 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+
     <title>{% if get_flashed_messages() %}Send Webmention Form Error - {% endif %}{% if title %}{{ title }}{% else %}Webmention Feed{% endif %}</title>
+    
+    <meta name="description" content="MentionMe lets you send and receive webmentions.">
+    <meta name="twitter:description" content="MentionMe lets you send and receive webmentions.">
+    <meta name="og:description" content="MentionMe lets you send and receive webmentions.">
+  
+    <meta name="og:site_name" content="MentionMe">
+  
+    <meta property="og:image" content="/static/feed.png">
+    <meta name="twitter:image:src" content="/static/feed.png">
+
+    <link rel="manifest" href="/manifest.json">
+  
+    <meta name="twitter:card" content="summary">
+
+    <link rel="icon" href="/favicon.ico">
+
+    <link rel="apple-touch-icon" sizes="16x16" href="/static/icons/16.png">
+
+    <link rel="apple-touch-icon" sizes="100x100" href="/static/icons/100.png">
+
+    <link rel="apple-touch-icon" sizes="196x196" href="/static/icons/196.png">
+
+    <link rel="apple-touch-icon" sizes="256x256" href="/static/icons/256.png">
+
+    <meta name="apple-touch-fullscreen" content="yes" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <meta name="apple-mobile-web-app-title" content="MentionMe">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
 
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
@@ -12,7 +45,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     
     <style id="darkmode" media="all">
-      html, .citation_box, details, summary, .social li {
+      html, .citation_box, details, summary, .social li, nav, .feed li {
         background-color: #1F2937;
       }
       a {
@@ -31,7 +64,7 @@
       p, li, dt, dd, .indieweb_footer, input, label {
         color: white;
       }
-      input, textarea, .feed li, .main_content_box {
+      input, textarea, .feed li, .main_content_box, .mobile_modal {
         background-color: #0c2548;
         background: #0c2548;
         color: #ccc;
@@ -40,11 +73,14 @@
   </head>
   <body>
     <main>
-      <a href="#main" class="accessibility_label">Skip to main content</a>
+      <a href="#main" class="accessibility_label_top">Skip to main content</a>
       <nav id="top_navigation">
-        <p><a href="/">Webmention Endpoint</a></p>
+        <a href="/" style="border: none;"><img src="/static/icons/50.png"></a>
         {% if session.get("me") %}
-        <ul>
+        <ul id="mobile_navigation">
+          <li><a onclick="trigger_modal('settings')">Menu</a></li>
+        </ul>
+        <ul id="desktop_navigation">
           <li><a href="/send">Send a Webmention</a></li>
           <li><a href="/sent">Sent Webmentions</a></li>
           <li><a href="/vouch">Vouch Settings</a></li>
@@ -93,25 +129,31 @@
             localStorage.setItem('darkmode', 'true');
           }
         }
+
+        function trigger_modal(id) {
+            var modal = document.getElementById(id);
+            if (modal.style.display == "none") {
+                modal.style.display = "block";
+            } else {
+                modal.style.display = "none";
+            }
+        }
       </script>
       <div id="main">
         {% block content %}
         {% endblock %}
       </div>
-      {% if config.SHOW_SETUP == True or session.get("me") %}
-      <footer>
-        <ul>
-          {% if config.SHOW_SETUP == True %}
-            <li><a href="/setup">Setup Instructions</a></li>
-          {% endif %}
-          {% if session.get("me") %}
-            <li><a href="/received">Received (JSON)</a></li>
-            <li><a href="/sent/json">Sent (JSON)</a></li>
-            <li><a href="/rss">RSS Feed</a></li>
-          {% endif %}
+      <section class="mobile_modal" style="display: none;" id="settings">
+        <h2>MentionMe</h2>
+        <span class="close mobile_close" onclick="trigger_modal('settings')">&times;</span>
+        <ul class="spaced_list">
+          <li><a href="/send">Send a Webmention</a></li>
+          <li><a href="/sent">Sent Webmentions</a></li>
+          <li><a href="/vouch">Vouch Settings</a></li>
+          <li><a href="/stats">Statistics</a></li>
+          <li><a href="/logout">Logout</a></li>
         </ul>
-      </footer>
-      {% endif %}
+      </section>
       <p class="accessibility_label"><a href="#main">Go Back to the Top</a></p>
     </main>
   </body>
