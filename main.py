@@ -83,6 +83,11 @@ def receiver():
     
     source = request.form.get("source")
     target = request.form.get("target")
+    vouch = request.form.get("vouch")
+    code = request.form.get("code", None)
+    realm = request.form.get("realm", None)
+
+    token = ""
 
     if not (source.startswith("http://") or source.startswith("https://")) \
         and (target.startswith("http://") or target.startswith("https://")):
@@ -108,7 +113,7 @@ def receiver():
     with connection:
         cursor = connection.cursor()
 
-        # Rreprocess webmentions from the same source
+        # Process new webmentions from the same source
         # Ensures all webmentions from source X are updated when a new webmention is sent from that source
 
         already_sent_from_source = cursor.execute("SELECT source, target FROM webmentions WHERE source = ?", (target, )).fetchall()
@@ -118,10 +123,18 @@ def receiver():
                 source,
                 target,
                 received_date,
-                status, contents
-                property
-                ) VALUES (?, ?, ?, ?, ?, ?)""",
-                (a[0], a[1], str(datetime.datetime.now()), "validating", "", "", )
+                status,
+                contents,
+                property,
+                author_name,
+                author_photo,
+                author_url,
+                content_html,
+                vouch,
+                approved_to_show,
+                token
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (a[0], a[1], str(datetime.datetime.now()), "validating", "", "", "", "", "", "", "", "", vouch, 0, token, )
             )
 
         cursor.execute("DELETE FROM webmentions WHERE source = ? and target = ?", (source, target, ))

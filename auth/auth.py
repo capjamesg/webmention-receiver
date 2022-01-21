@@ -49,7 +49,7 @@ def logout():
 
 @auth.route("/login", methods=["GET"])
 def login():
-    return render_template("user/auth.html", title="Webmention Dashboard Login")
+    return render_template("user/auth.html", title="MentionMe Login")
 
 @auth.route("/discover", methods=["POST"])
 def discover_auth_endpoint():

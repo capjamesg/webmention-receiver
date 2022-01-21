@@ -186,12 +186,63 @@ def validate_webmentions():
         
         cursor.execute("DELETE FROM pending_webmentions;")
             
-        get_webmentions_for_url = cursor.execute("SELECT source, target, vouch FROM webmentions WHERE status = 'validating';").fetchall()
+        get_webmentions_for_url = cursor.execute("SELECT source, target, vouch, token FROM webmentions WHERE status = 'validating';").fetchall()
 
         for u in get_webmentions_for_url:
             source = u[0]
             target = u[1]
             vouch = u[2]
+            token = u[3]
+
+            headers = {}
+                
+            # check if the source is a private webmention that requires authentication
+
+            if token != "":
+                try:
+                    source_request = requests.head(source, allow_redirects=True, timeout=5)
+                except:
+                    contents = "Source URL could not be retrieved."
+                    cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+                    continue
+
+                # check for www-authenticate header
+                if source_request.headers.get("www-authenticate"):
+                    link_headers = requests.utils.parse_header_links(source_request['links'].rstrip('>').replace('>,<', ',<'))
+
+                    if link_headers.get("token_endpoint"):
+                        token_endpoint = link_headers["token_endpoint"]["url"]
+                    else:
+                        contents = "Source URL does not contain a token endpoint."
+                        cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+                        continue
+                else:
+                    contents = "Source URL does not specify a token endpoint."
+                    cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+                    continue
+
+                data = {
+                    "grant_type": "authorization_code",
+                    "code": token
+                }
+
+                try:
+                    token_request = requests.post(token_endpoint, data=data, allow_redirects=True, timeout=5)
+                except:
+                    contents = "Token endpoint did not return a token."
+                    cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+                    continue
+
+                if token_request.status_code != 200:
+                    contents = "Token endpoint did not return a token."
+                    cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
+                    continue
+
+                token_to_send = token_request.json()["access_token"]
+
+                headers = {
+                    "Authorization": "Bearer " + token_to_send
+                }
 
             moderate = True
 
@@ -202,7 +253,7 @@ def validate_webmentions():
             session.max_redirects = 3
 
             try:
-                check_source_size = session.head(source, timeout=5)
+                check_source_size = session.head(source, timeout=5, headers=headers)
 
                 validated_headers = validate_headers(check_source_size, cursor, source, target)
             except requests.exceptions.TooManyRedirects:
@@ -221,7 +272,7 @@ def validate_webmentions():
                 continue
 
             try:
-                get_source_for_validation = session.get(source).text
+                get_source_for_validation = session.get(source, headers=headers).text
             except Exception as e:
                 print(e)
                 continue
