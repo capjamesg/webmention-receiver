@@ -21,13 +21,13 @@ def discover_webmention_endpoint():
     return jsonify({"success": True, "endpoint": endpoint}), 200
 
 @send.route("/send", methods=["GET", "POST"])
-def send_webmention():
+def send_webmention_view():
     if request.method == "POST":
         source = request.form.get("source")
         target = request.form.get("target")
         vouch = request.form.get("vouch")
 
-        message, item = send_function(source, target)
+        message, item = send_webmention(source, target)
 
         if item == None:
             flash(message)
@@ -75,7 +75,7 @@ def send_webmention_anyone():
         source = request.form.get("source")
         target = request.form.get("target")
 
-        message, _ = send_function(source, target)
+        message, _ = send_webmention(source, target)
         
         return render_template(
             "send_open.html", 

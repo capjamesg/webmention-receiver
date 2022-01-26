@@ -194,11 +194,13 @@ def validate_webmentions():
             vouch = u[2]
             token = u[3]
 
-            headers = {}
+            headers = {
+                "User-Agent": "webmention-endpoint-james"
+            }
                 
             # check if the source is a private webmention that requires authentication
 
-            if token != "":
+            if token and token != "":
                 try:
                     source_request = requests.head(source, allow_redirects=True, timeout=5)
                 except:
@@ -256,6 +258,13 @@ def validate_webmentions():
                 check_source_size = session.head(source, timeout=5, headers=headers)
 
                 validated_headers = validate_headers(check_source_size, cursor, source, target)
+        
+                if check_source_size.status_code == 410:
+                    # Support deleted webmention in line with the spec
+                    cursor.execute("DELETE FROM webmentions WHERE source = ?;", (source, ))
+
+                    continue
+
             except requests.exceptions.TooManyRedirects:
                 contents = "Source redirected too many times."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
@@ -272,21 +281,15 @@ def validate_webmentions():
                 continue
 
             try:
-                get_source_for_validation = session.get(source, headers=headers).text
+                get_source_for_validation = session.get(source, headers=headers)
             except Exception as e:
                 print(e)
                 continue
 
             if not validated_headers:
                 validated_headers = validate_headers(check_source_size, cursor, source, target)
-        
-            if check_source_size.status_code == 410:
-                # Support deleted webmention in line with the spec
-                cursor.execute("DELETE FROM webmentions WHERE source = ?;", (source, ))
 
-                continue
-
-            parse_page = BeautifulSoup(get_source_for_validation, 'html.parser')
+            parse_page = BeautifulSoup(get_source_for_validation.text, 'html.parser')
 
             # get all <link> tags
             meta_links = parse_page.find_all("link")
@@ -301,13 +304,13 @@ def validate_webmentions():
 
                         continue
 
-            if check_source_size.status_code != 200:
+            if get_source_for_validation.status_code != 200:
                 contents = "Webmention target is invalid."
                 cursor.execute("UPDATE webmentions SET status = ? WHERE source = ? and target = ?", (contents, source, target))
 
                 continue
             
-            soup = BeautifulSoup(get_source_for_validation, "lxml")
+            soup = parse_page
 
             all_anchors = soup.find_all("a")
             contains_valid_link_to_target = False
@@ -333,6 +336,15 @@ def validate_webmentions():
             parse = mf2py.Parser(url=source)
             
             parsed_h_entry = mf2util.interpret_comment(parse.to_dict(), source, target)
+
+            target_request = requests.get(target, headers=headers)
+
+            if target_request.status_code != 200:
+                continue
+            
+            target_soup = BeautifulSoup(target_request.text, 'html.parser')
+
+            target_title = target_soup.find("title")
 
             post_type = "reply"
 
@@ -400,7 +412,8 @@ def validate_webmentions():
                     author_url = ?,
                     content_html = ?,
                     status = ?,
-                    approved_to_show = ? 
+                    approved_to_show = ?,
+                    page_title = ?
                 WHERE source = ? AND target = ?""",
                     (content,
                     post_type,
@@ -410,6 +423,7 @@ def validate_webmentions():
                     content_html,
                     "valid",
                     moderate,
+                    target_title,
                     source,
                     target)
                 )

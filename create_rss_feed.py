@@ -1,19 +1,20 @@
 from feedgen.feed import FeedGenerator
 from config import RSS_DIRECTORY
+import datetime
 import dateutil
 import sqlite3
 
 fg = FeedGenerator()
 
 def generate_feed():
-    fg.id("https://webmention.jamesg.blog")
-    fg.title("James' Webmention Receiver Feed")
-    fg.author(name="James' Webmention Receiver")
-    fg.link(href="https://webmention.jamesg.blog", rel="self")
-    fg.logo("https://webmention.jamesg.blog/static/favicon.ico")
-    fg.subtitle("James' Webmention Receiver Feed")
-    fg.description("Webmentions sent to webmention.jamesg.blog")
-    fg.language("en")
+    feed_text = """
+    <feed>
+        <title>James' Webmention Receiver Feed</title>
+        <link href="https://webmention.jamesg.blog" rel="self" />
+        <id>https://webmention.jamesg.blog</id>
+        <generator uri="https://github.com/capjamesg/webmention-receiver">webmention-receiver</generator>
+        <updated>{}</updated>
+    """.format(datetime.datetime.now().isoformat())
 
     connection = sqlite3.connect(RSS_DIRECTORY + "/webmentions.db")
 
@@ -27,58 +28,78 @@ def generate_feed():
             received_date,
             contents,
             property,
-            author_name
+            author_name,
+            post_title
             FROM webmentions
-            WHERE source NOT LIKE 'https://brid.gy/%' AND status = 'valid'
+            WHERE status = 'valid'
             ORDER BY received_date DESC LIMIT 10;""").fetchall()
 
         for webmention in webmentions:
             if webmention[4] == "like-of":
-                post_type = "❤️ Like"
+                post_type = ("❤️", "liked your post")
             elif webmention[4] == "mention-of":
-                post_type = "💬 Mention"
+                post_type = ("💬", "mentioned you in")
             elif webmention[4] == "bookmark-of":
-                post_type = "🔖 Bookmark"
+                post_type = ("🔖", "bookmarked your post")
             else:
-                post_type = "💬 Webmention"
-
-            fe = fg.add_entry()
-            fe.id(webmention[0])
+                post_type = ("💬", "replied to your post")
+                
+            new_entry = """
+                <entry>
+                    <id>{}</id>
+            """.format(webmention[0])
 
             if post_type and webmention[5] and webmention[1]:
-                fe.title(f"")
+                new_entry += """
+                    <title></title>
+                """
             else:
-                fe.title(webmention[0])
+                new_entry += """
+                    <title>{}</title>
+                """.format(webmention[0])
 
             try:
                 date = dateutil.parser.parse(webmention[2])
 
                 timestamp = date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
-                fe.pubDate(timestamp)
+                new_entry += """
+                    <published>{}</published>
+                    <updated>{}</updated>
+                """.format(timestamp, timestamp)
             except:
                 pass
 
-            fe.link(href=webmention[0])
+            new_entry += """
+                <link href="{}" />
+            """.format(webmention[0])
 
             if webmention[3]:
-                fe.description(webmention[3])
+                new_entry += """
+                    <content type="html">{}</content>
+                """
             else:
                 if webmention[5]:
                     # parse date
                     date = dateutil.parser.parse(webmention[2])
 
                     # show date as day date month year
-                    date = date.strftime("%A %-d %M, %Y")
+                    date = date.strftime("%d %b, %Y")
 
-                    fe.description("""
-                    <p>{} from {} to <a href="{}">{}</a>. Received on {}.</p>
-                    """.format(post_type, webmention[5], webmention[1], webmention[1], date))
+                    new_entry += """
+                    <content type="html"><p>{}</p><p>{} {} {} <a href="{}">{}</a>.</p></content>
+                    """.format(webmention[3], post_type[0], webmention[5], post_type[1], webmention[1], webmention[6])
                 else:
-                    fe.description("""
-                    <p>{} from {} to <a href="{}">{}</a>. Received on {}.</p>
-                    """.format(post_type, webmention[0].split("//")[1].split("/")[0], webmention[1], webmention[1], date))
+                    new_entry += """
+                    <content type="html"><p>{} {} {} <a href="{}">{}</a>.</p></content>
+                    """.format(post_type[0], webmention[5], post_type[1], webmention[1], webmention[6])
 
-    fg.rss_file("/home/capjamesg/webmention_receiver/static/webmentions.xml")
+            new_entry += "</entry>"
+            feed_text += new_entry
+
+    feed_text += "</feed>"
+
+    with open("/home/james/webmention_receiver/static/webmentions.xml", "w") as f:
+        f.write(feed_text)
 
     print("created webmentions.xml RSS feed")
 

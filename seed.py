@@ -24,6 +24,7 @@ def create_tables():
             received_date,
             status,
             vouch,
+            
             approved_to_show integer default 0);
         """)
 

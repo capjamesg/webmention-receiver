@@ -133,7 +133,7 @@ def receiver():
                 vouch,
                 approved_to_show,
                 token
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (a[0], a[1], str(datetime.datetime.now()), "validating", "", "", "", "", "", "", "", "", vouch, 0, token, )
             )
 
