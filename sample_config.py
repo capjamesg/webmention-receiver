@@ -9,7 +9,7 @@ ROOT_DIRECTORY = os.path.dirname(os.path.abspath("__init__.py"))
 
 RSS_DIRECTORY = "/home/capjamesg/webmention_receiver"
 
-SQLALCHEMY_DATABASE_URI = 'sqlite:///webmentions.db'
+SQLALCHEMY_DATABASE_URI = "sqlite:///webmentions.db"
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 CALLBACK_URL = "http://localhost:5000/callback"

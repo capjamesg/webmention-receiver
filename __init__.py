@@ -1,9 +1,10 @@
+import os
+
+import dateutil.parser
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
-from config import SECRET_KEY
-import dateutil.parser
-from config import SENTRY_DSN, SENTRY_SERVER_NAME
-import os
+
+from config import SECRET_KEY, SENTRY_DSN, SENTRY_SERVER_NAME
 
 # set up sentry for error handling
 if SENTRY_DSN != "":
@@ -14,11 +15,12 @@ if SENTRY_DSN != "":
         dsn=SENTRY_DSN,
         integrations=[FlaskIntegration()],
         traces_sample_rate=1.0,
-        server_name=SENTRY_SERVER_NAME
+        server_name=SENTRY_SERVER_NAME,
     )
 
 # init SQLAlchemy so we can use it later in our models
 db = SQLAlchemy()
+
 
 def create_app():
     app = Flask(__name__)
@@ -31,13 +33,13 @@ def create_app():
     app.secret_key = SECRET_KEY
 
     # from .models import User
-    
+
     @app.template_filter("convert_time")
     def _jinja2_filter_datetime(date, fmt=None):
         date = dateutil.parser.parse(date)
         native = date.replace(tzinfo=None)
-        format= "%b %d, %Y (%H:%M:%S)"
-        return native.strftime(format) 
+        format = "%b %d, %Y (%H:%M:%S)"
+        return native.strftime(format)
 
     # blueprint for non-auth parts of app
     from main import main as main_blueprint
@@ -69,5 +71,6 @@ def create_app():
         return render_template("404.html", title="Method not allowed", error=405), 405
 
     return app
+
 
 create_app()

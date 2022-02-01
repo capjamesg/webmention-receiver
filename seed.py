@@ -1,8 +1,9 @@
-
-from flask import Blueprint
 import sqlite3
 
-seed_db = Blueprint('seed', __name__)
+from flask import Blueprint
+
+seed_db = Blueprint("seed", __name__)
+
 
 @seed_db.cli.command("create-tables")
 def create_tables():
@@ -11,7 +12,8 @@ def create_tables():
     with connection:
         cursor = connection.cursor()
 
-        cursor.execute("""CREATE TABLE webmentions (
+        cursor.execute(
+            """CREATE TABLE webmentions (
             id integer primary key autoincrement,
             source,
             target,
@@ -26,9 +28,11 @@ def create_tables():
             vouch,
             
             approved_to_show integer default 0);
-        """)
+        """
+        )
 
-        cursor.execute("""CREATE TABLE sent_webmentions (
+        cursor.execute(
+            """CREATE TABLE sent_webmentions (
             id integer primary key autoincement,
             source,
             target,
@@ -36,21 +40,28 @@ def create_tables():
             status_code,
             response,
             webmention_endpoint);
-        """)
+        """
+        )
 
-        cursor.execute("""CREATE TABLE pending_webmentions (
+        cursor.execute(
+            """CREATE TABLE pending_webmentions (
             id integer primary key autoincrement,
             to_check);
-        """)
+        """
+        )
 
-        cursor.execute("""CREATE TABLE webhooks (
+        cursor.execute(
+            """CREATE TABLE webhooks (
             feed_url text,
             last_url_sent text);
-        """)
+        """
+        )
 
-        cursor.execute("""CREATE TABLE vouch (
+        cursor.execute(
+            """CREATE TABLE vouch (
             domain text,
             added_date text);
-        """)
+        """
+        )
 
     print("created database tables")

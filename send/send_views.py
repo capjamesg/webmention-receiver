@@ -1,12 +1,14 @@
 import sqlite3
 
 import indieweb_utils
-from flask import request, jsonify, render_template, redirect, flash, Blueprint
+from flask import Blueprint, flash, jsonify, redirect, render_template, request
 
 from config import ROOT_DIRECTORY
+
 from .send_function import *
 
-send = Blueprint('send', __name__, template_folder='templates')
+send = Blueprint("send", __name__, template_folder="templates")
+
 
 @send.route("/endpoint/discover")
 def discover_webmention_endpoint():
@@ -17,8 +19,9 @@ def discover_webmention_endpoint():
     if endpoint == None:
         message = "No endpoint could be found for this resource."
         return jsonify({"success": False, "message": message}), 400
-    
+
     return jsonify({"success": True, "endpoint": endpoint}), 200
+
 
 @send.route("/send", methods=["GET", "POST"])
 def send_webmention_view():
@@ -50,7 +53,8 @@ def send_webmention_view():
 
         with connection:
             cursor = connection.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO sent_webmentions (
                     source,
                     target,
@@ -61,13 +65,15 @@ def send_webmention_view():
                     location_header,
                     vouch,
                     approved_to_show
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)"""
-            , tuple(item) )
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                tuple(item),
+            )
             id = cursor.lastrowid
-        
+
         return redirect(f"/sent/{id}")
 
     return render_template("dashboard/send_webmention.html", title="Send a Webmention")
+
 
 @send.route("/send/open", methods=["POST"])
 def send_webmention_anyone():
@@ -76,9 +82,5 @@ def send_webmention_anyone():
         target = request.form.get("target")
 
         message, _ = send_webmention(source, target)
-        
-        return render_template(
-            "send_open.html", 
-            message=message,
-            original_url=target
-        )
+
+        return render_template("send_open.html", message=message, original_url=target)
